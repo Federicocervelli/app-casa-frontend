@@ -1,0 +1,23 @@
+Chores:
+- id (UUID) (Primaria)
+- users (array di chiavi esterne UUID)
+- house (UUID chiave esterna)
+- start (timestamp)
+- end (timestamp)
+- done_at (timestamp) (opzionale)
+- name (Necessario)
+- desc (opzionale)
+- is_done (Boolean)
+- is_periodic (Boolean) (Default False)
+- cyclicality (VARCHAR) (Giornaliera, Settimanale, Mensile)
+- day_of_week (Int, 0-6) (Opzionale)
+- day_of_month (Int, 0-31) (Opzionale)
+
+Users:
+- id (Primaria)
+- clerk_id (Necessaria) (Varchar)
+- house (UUID) (Chiave esterna in casa) (Default nulla)
+
+Houses:
+- id (Primaria)
+- name (Necessaria) (Varchar)

@@ -1,20 +1,42 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { StatusBar } from "expo-status-bar";
+import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import * as SecureStore from "expo-secure-store";
+import { ClerkProvider, SignedIn, SignedOut, useAuth } from "@clerk/clerk-expo";
+import { ThemeProvider, useTheme } from "@rneui/themed";
+import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
+
+import Login from "./components/Login";
+import Home from "./components/home";
+import MainPage from "./components/MainPage";
+
+const tokenCache = {
+  async getToken(key: string) {
+    try {
+      return SecureStore.getItemAsync(key);
+    } catch (e) {
+      return null;
+    }
+  },
+  async saveToken(key: string, value: string) {
+    try {
+      await SecureStore.setItemAsync(key, value);
+    } catch (e) {
+      return;
+    }
+  },
+};
 
 export default function App() {
+  
+  const { theme } = useTheme();
+  const key = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY as string;
   return (
-    <View style={styles.container}>
-      <Text>Open up App.tsx to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
+    <ClerkProvider publishableKey={key} tokenCache={tokenCache}>
+      <ThemeProvider>
+        <SafeAreaProvider>
+          <MainPage/>
+        </SafeAreaProvider>
+      </ThemeProvider>
+    </ClerkProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});

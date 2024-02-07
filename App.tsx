@@ -4,6 +4,7 @@ import * as SecureStore from "expo-secure-store";
 import { ClerkProvider, SignedIn, SignedOut, useAuth } from "@clerk/clerk-expo";
 import { ThemeProvider, useTheme } from "@rneui/themed";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 import Login from "./components/Login";
 import Home from "./components/home";
@@ -27,16 +28,17 @@ const tokenCache = {
 };
 
 export default function App() {
-  
   const { theme } = useTheme();
   const key = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY as string;
   return (
-    <ClerkProvider publishableKey={key} tokenCache={tokenCache}>
-      <ThemeProvider>
-        <SafeAreaProvider>
-          <MainPage/>
-        </SafeAreaProvider>
-      </ThemeProvider>
-    </ClerkProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ClerkProvider publishableKey={key} tokenCache={tokenCache}>
+        <ThemeProvider>
+          <SafeAreaProvider>
+            <MainPage />
+          </SafeAreaProvider>
+        </ThemeProvider>
+      </ClerkProvider>
+    </GestureHandlerRootView>
   );
 }

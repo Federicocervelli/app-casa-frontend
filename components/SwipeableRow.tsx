@@ -83,7 +83,7 @@ export default class GmailStyleSwipeableRow extends Component<GmailStyleSwipeabl
   };
   render() {
     const { children } = this.props;
-    return !this.hasSwiped ? (
+    return (
       <Swipeable
         ref={this.updateRef}
         friction={3}
@@ -96,7 +96,7 @@ export default class GmailStyleSwipeableRow extends Component<GmailStyleSwipeabl
       >
         {children}
       </Swipeable>
-    ) : null;
+    );
   }
 }
 

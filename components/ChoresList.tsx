@@ -1,11 +1,16 @@
-import React, { Component, useState } from "react";
+import React, { Component, useCallback, useState } from "react";
 import { StyleSheet, Text, View, I18nManager, ScrollView } from "react-native";
 import SwipeableFlatList from "rn-gesture-swipeable-flatlist";
 
-import { FlatList, RectButton } from "react-native-gesture-handler";
+import {
+  FlatList,
+  RectButton,
+  RefreshControl,
+  TouchableOpacity,
+} from "react-native-gesture-handler";
 
 import GmailStyleSwipeableRow from "./SwipeableRow";
-import { useTheme } from "@rneui/themed";
+import { Icon, useTheme } from "@rneui/themed";
 
 //  To toggle LTR/RTL change to `true`
 I18nManager.allowRTL(false);
@@ -79,82 +84,136 @@ function formatTimestamp(timestampInSeconds: number): string {
   }
 }
 
-const Row = ({ item }: { item: Chore }) => {
-  const handlePress = () => {
-    // eslint-disable-next-line no-alert
-    window.alert(item.id);
-  };
-
-  const { theme } = useTheme();
-
-  return (
-    <RectButton
-      style={[styles.rectButton, { backgroundColor: "black" }]}
-      onPress={handlePress}
-    >
-      <Text style={styles.fromText}>{item.name}</Text>
-      <Text numberOfLines={2} style={styles.messageText}>
-        {item.desc}
-      </Text>
-      <Text style={styles.dateText}>{formatTimestamp(item.end)} ❭</Text>
-    </RectButton>
-  );
-};
-
 export default function List() {
-
   const [data, setData] = useState<Chore[]>(DATA);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const {theme} = useTheme();
-
-  const handleSwipeSignal = (id: string, direction: string) => {
-    console.log(`Swiped ${direction} from ${id}`);
-    // remove the item from the list
+  const deleteItem = useCallback((id: string) => {
     setData((prevData) => prevData.filter((item) => item.id !== id));
-  };
+  }, []);
+
+  const editItem = useCallback((id: string) => {
+    alert(`Editing item with id ${id}`);
+  }, []);
+
+  const renderRightAction = useCallback(
+    (item: Chore) => (
+      <TouchableOpacity
+        onPress={() => deleteItem(item.id)}
+        style={styles.rightAction}
+      >
+        <Text style={styles.actionText}>Delete</Text>
+      </TouchableOpacity>
+    ),
+    [deleteItem]
+  );
+  
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+
+    // Fetch updated data or perform any necessary async operations
+
+    // Simulate fetching data by delaying the reset of refreshing state
+    setTimeout(() => {
+      setData(DATA); // Replace with your actual refreshed data
+      setRefreshing(false);
+    }, 1000); // Adjust the delay as needed
+  }, []);
+
+  const renderLeftAction = useCallback(
+    (item: Chore) => (
+      <TouchableOpacity
+        onPress={() => editItem(item.id)}
+        style={styles.leftAction}
+      >
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            paddingHorizontal: "auto",
+          }}
+        >
+          <Icon name="check" size={40} color="white" />
+        </View>
+      </TouchableOpacity>
+    ),
+    [editItem]
+  );
+
+  const renderItem = useCallback(
+    ({ item }: { item: Chore }) => (
+      <View style={styles.item}>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <Text style={{ color: "white", fontWeight: "bold" }}>{item.name}</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+            <View><Icon name="time-outline" type="ionicon" color="white" size={20} /></View>
+            <Text style={{ color: "white", marginTop: -2 }}>{formatTimestamp(item.end)}</Text>
+            
+          </View>
+        </View>
+        <Text style={{ color: "white", marginTop: 10 }}>{item.desc}</Text>
+      </View>
+    ),
+    []
+  );
 
   return (
-    <SwipeableFlatList
-      data={data}
-      ItemSeparatorComponent={() => <View style={[styles.separator, { backgroundColor: theme.colors.grey0 }]} />}
-      renderItem={({ item }) => (
-        <GmailStyleSwipeableRow onSwipe={handleSwipeSignal} id={item.id}>
-          <Row item={item} />
-        </GmailStyleSwipeableRow>
-      )}
-      keyExtractor={(_item, index) => `message ${index}`}
-    />
+    <View style={styles.container}>
+      <SwipeableFlatList
+        swipeableProps={{
+          friction: 3,
+          leftThreshold: 100,
+
+          overshootLeft: false,
+          overshootRight: false,
+        }}
+        data={data}
+        keyExtractor={(item) => item.id}
+        enableOpenMultipleRows={false} //make sure to refresh the list once you alter this
+        renderItem={renderItem}
+        renderLeftActions={renderLeftAction}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        //renderRightActions={renderRightAction}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  rectButton: {
+  container: {
     flex: 1,
-    height: 80,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    justifyContent: "space-between",
-    flexDirection: "column",
+    width: "100%",
+    backgroundColor: "#000",
   },
-  separator: {
-    height: StyleSheet.hairlineWidth,
+  item: {
+    padding: 20,
+    backgroundColor: "#000",
+    borderBottomColor: "#333",
+    borderBottomWidth: 1,
   },
-  fromText: {
-    fontWeight: "bold",
-    backgroundColor: "transparent",
+  rightAction: {
+    backgroundColor: "red",
+    justifyContent: "center",
+    alignItems: "center",
+    height: "100%",
+  },
+  leftAction: {
+    backgroundColor: "green",
+    justifyContent: "center",
+    alignItems: "center",
+    minWidth: 100,
+    height: "100%",
+  },
+  actionText: {
     color: "#fff",
-  },
-  messageText: {
-    color: "#999",
-    backgroundColor: "transparent",
-  },
-  dateText: {
-    backgroundColor: "transparent",
-    position: "absolute",
-    right: 20,
-    top: 10,
-    color: "#999",
-    fontWeight: "bold",
+    fontWeight: "600",
+    padding: 20,
   },
 });
 
@@ -310,7 +369,7 @@ const DATA: Chore[] = [
     day_of_month: null,
   },
   {
-    id: "12",
+    id: "11",
     users: ["user3"],
     house: "house2",
     start: 1707612892, // Timestamp for a specific date and time
@@ -325,7 +384,7 @@ const DATA: Chore[] = [
     day_of_month: null,
   },
   {
-    id: "13",
+    id: "12",
     users: ["user1", "user2"],
     house: "house1",
     start: 1707612892, // Timestamp for a specific date and time

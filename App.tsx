@@ -2,7 +2,7 @@ import { StatusBar } from "expo-status-bar";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import { ClerkProvider, SignedIn, SignedOut, useAuth } from "@clerk/clerk-expo";
-import { ThemeProvider, useTheme } from "@rneui/themed";
+import { ThemeProvider, createTheme, useTheme } from "@rneui/themed";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
@@ -28,13 +28,14 @@ const tokenCache = {
 };
 
 export default function App() {
-  const { theme } = useTheme();
   const key = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY as string;
+  
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ClerkProvider publishableKey={key} tokenCache={tokenCache}>
-        <ThemeProvider>
+        <ThemeProvider >
           <SafeAreaProvider>
+            <StatusBar style="light"/>
             <MainPage />
           </SafeAreaProvider>
         </ThemeProvider>

@@ -1,7 +1,7 @@
 import { FAB, useTheme, ListItem, Button } from "@rneui/themed";
 import {  View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Example from "../test";
+import List from "../ChoresList";
 
 
 const sampleData = [
@@ -40,9 +40,9 @@ const Faccende = () => {
 
   return (
     <SafeAreaView
-      style={{ flex: 1, backgroundColor: "black", alignItems: "center", paddingHorizontal: 20 }}
+      style={{ flex: 1, backgroundColor: "black", alignItems: "center" }}
     >
-      <Example/>
+      <List/>
       
       <FAB
         color={theme.colors.primary}

@@ -1,5 +1,5 @@
-import React, { Component, useCallback, useState } from "react";
-import { StyleSheet, Text, View, I18nManager, ScrollView } from "react-native";
+import React, { Component, useCallback, useEffect, useState } from "react";
+import { StyleSheet, Text, View, I18nManager, ScrollView, ActivityIndicator } from "react-native";
 import SwipeableFlatList from "rn-gesture-swipeable-flatlist";
 
 import {
@@ -10,7 +10,7 @@ import {
 } from "react-native-gesture-handler";
 
 import GmailStyleSwipeableRow from "./SwipeableRow";
-import { Icon, useTheme } from "@rneui/themed";
+import { Icon, Skeleton, useTheme } from "@rneui/themed";
 
 //  To toggle LTR/RTL change to `true`
 I18nManager.allowRTL(false);
@@ -86,14 +86,53 @@ function formatTimestamp(timestampInSeconds: number): string {
 
 export default function List() {
   const [data, setData] = useState<Chore[]>(DATA);
+  const [visibleData, setVisibleData] = useState<Chore[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const deleteItem = useCallback((id: string) => {
-    setData((prevData) => prevData.filter((item) => item.id !== id));
+  useEffect(() => {
+    setVisibleData(data.filter(chore => !chore.is_done));
+  }, [data]);
+
+  useEffect(() => {
+    // Simulate API call
+    fetchData();
   }, []);
 
-  const editItem = useCallback((id: string) => {
-    alert(`Editing item with id ${id}`);
+  const fetchData = async () => {
+    try {
+      // Simulate API call delay
+      setTimeout(() => {
+        // Replace this with your actual API call
+        const apiResponse = DATA;
+        setData(apiResponse);
+        setVisibleData(apiResponse.filter(chore => !chore.is_done));
+        setLoading(false);
+      }, 3000); // Adjust the delay as needed
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      setLoading(false);
+    }
+  };
+
+  const deleteItem = useCallback((id: string) => {
+    setData(prevData =>
+      prevData.map(chore =>
+        chore.id === id ? { ...chore, is_done: true } : chore
+      )
+    );
+  }, []);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+
+    // Fetch updated data or perform any necessary async operations
+
+    // Simulate fetching data by delaying the reset of refreshing state
+    setTimeout(() => {
+      setData(DATA); // Replace with your actual refreshed data
+      setRefreshing(false);
+    }, 3000); // Adjust the delay as needed
   }, []);
 
   const renderRightAction = useCallback(
@@ -107,23 +146,11 @@ export default function List() {
     ),
     [deleteItem]
   );
-  
-  const onRefresh = useCallback(() => {
-    setRefreshing(true);
-
-    // Fetch updated data or perform any necessary async operations
-
-    // Simulate fetching data by delaying the reset of refreshing state
-    setTimeout(() => {
-      setData(DATA); // Replace with your actual refreshed data
-      setRefreshing(false);
-    }, 1000); // Adjust the delay as needed
-  }, []);
 
   const renderLeftAction = useCallback(
     (item: Chore) => (
       <TouchableOpacity
-        onPress={() => editItem(item.id)}
+        onPress={() => (deleteItem(item.id))}
         style={styles.leftAction}
       >
         <View
@@ -137,11 +164,12 @@ export default function List() {
         </View>
       </TouchableOpacity>
     ),
-    [editItem]
+    []
   );
 
   const renderItem = useCallback(
-    ({ item }: { item: Chore }) => (
+    ({ item, index }: { item: Chore, index: number }) => (
+      <>
       <View style={styles.item}>
         <View
           style={{
@@ -154,36 +182,69 @@ export default function List() {
           <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
             <View><Icon name="time-outline" type="ionicon" color="white" size={20} /></View>
             <Text style={{ color: "white", marginTop: -2 }}>{formatTimestamp(item.end)}</Text>
-            
           </View>
         </View>
         <Text style={{ color: "white", marginTop: 10 }}>{item.desc}</Text>
       </View>
+      </>
     ),
     []
   );
 
+  if (loading) {
+    // Show loading skeleton or any other loading indicator
+    return <LoadingSkeleton />;
+  }
+
   return (
     <View style={styles.container}>
       <SwipeableFlatList
+        
         swipeableProps={{
           friction: 3,
           leftThreshold: 100,
-
           overshootLeft: false,
           overshootRight: false,
         }}
-        data={data}
+        data={visibleData}
         keyExtractor={(item) => item.id}
-        enableOpenMultipleRows={false} //make sure to refresh the list once you alter this
+        enableOpenMultipleRows={false}
         renderItem={renderItem}
         renderLeftActions={renderLeftAction}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        //renderRightActions={renderRightAction}
+        ItemSeparatorComponent={() => <View style={styles.separator} />}        
       />
     </View>
   );
 }
+
+const LoadingSkeleton: React.FC = () => {
+  // Implement your loading skeleton component
+  // You can use libraries like Shimmer to create loading skeletons
+  return (
+    <View style={{ flex: 1, justifyContent: "flex-start", alignItems: "flex-start", width: "100%" }}>
+      {[1, 2, 3, 4, 5, 6, 7].map((index) => (
+        <View style={[styles.item, {borderBottomWidth: 1, borderBottomColor: "#333"}]} key={index}>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <Skeleton animation="wave" style={{ width: 100 }} />
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+            <View><Icon name="time-outline" type="ionicon" color="white" size={20} /></View>
+            <Skeleton animation="wave" style={{ width: 100 }} />
+          </View>
+        </View>
+        <Skeleton animation="wave" style={{ width: 200, marginTop: 10 }} />
+        <Skeleton animation="wave" style={{ width: 200, marginTop: 5 }} />
+      </View>
+      ))}
+    </View>
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -191,11 +252,21 @@ const styles = StyleSheet.create({
     width: "100%",
     backgroundColor: "#000",
   },
+  loadingContainer: {
+    width: "100%",
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#333",
+  },
+  separator: {
+    height: 1,
+    backgroundColor: "#333", // Change the color to match your design
+  },
   item: {
+    width: "100%",
     padding: 20,
     backgroundColor: "#000",
-    borderBottomColor: "#333",
-    borderBottomWidth: 1,
   },
   rightAction: {
     backgroundColor: "red",

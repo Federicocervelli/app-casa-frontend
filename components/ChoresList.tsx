@@ -1,5 +1,12 @@
 import React, { Component, useCallback, useEffect, useState } from "react";
-import { StyleSheet, Text, View, I18nManager, ScrollView, ActivityIndicator } from "react-native";
+import {
+  StyleSheet,
+  Text,
+  View,
+  I18nManager,
+  ScrollView,
+  ActivityIndicator,
+} from "react-native";
 import SwipeableFlatList from "rn-gesture-swipeable-flatlist";
 
 import {
@@ -11,6 +18,7 @@ import {
 
 import GmailStyleSwipeableRow from "./SwipeableRow";
 import { Icon, Skeleton, useTheme } from "@rneui/themed";
+import { useAuth } from "@clerk/clerk-expo";
 
 //  To toggle LTR/RTL change to `true`
 I18nManager.allowRTL(false);
@@ -85,72 +93,89 @@ function formatTimestamp(timestampInSeconds: number): string {
 }
 
 export default function List() {
-  const [data, setData] = useState<Chore[]>(DATA);
+  const [data, setData] = useState<Chore[]>([]);
   const [visibleData, setVisibleData] = useState<Chore[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadingChoreDone, setLoadingChoreDone] = useState(false);
+  const { getToken } = useAuth();
 
   useEffect(() => {
-    setVisibleData(data.filter(chore => !chore.is_done));
+    setVisibleData(data.filter((chore) => !chore.is_done));
   }, [data]);
 
   useEffect(() => {
-    // Simulate API call
     fetchData();
   }, []);
 
+  useEffect(() => {
+    console.log("loadingChoreDone:", loadingChoreDone);
+  }, [loadingChoreDone]);
+
   const fetchData = async () => {
     try {
-      // Simulate API call delay
-      setTimeout(() => {
-        // Replace this with your actual API call
-        const apiResponse = DATA;
-        setData(apiResponse);
-        setVisibleData(apiResponse.filter(chore => !chore.is_done));
-        setLoading(false);
-      }, 3000); // Adjust the delay as needed
+      // Assuming you have a function to get the bearer token
+      const bearerToken = await getToken();
+
+      const response = await fetch(
+        "https://app-casa-backend.federicocervelli01.workers.dev/api/v1/chores",
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${bearerToken}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+
+      const apiResponse = await response.json();
+
+      setData(apiResponse);
+      setLoading(false);
     } catch (error) {
       console.error("Error fetching data:", error);
       setLoading(false);
     }
   };
 
-  const deleteItem = useCallback((id: string) => {
-    setData(prevData =>
-      prevData.map(chore =>
-        chore.id === id ? { ...chore, is_done: true } : chore
-      )
+  const deleteItem = useCallback(async (id: string) => {
+    if (loadingChoreDone) {
+      return;
+    }
+    setLoadingChoreDone(true);
+
+    const result = await fetch(
+      `https://app-casa-backend.federicocervelli01.workers.dev/api/v1/chore/${id}/complete`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${await getToken()}`,
+        },
+      }
     );
+
+    if (!result.ok) {
+      console.error("Error deleting item:", result);
+    }
+
+    setData(await result.json());
+    setLoadingChoreDone(false);
   }, []);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-
-    // Fetch updated data or perform any necessary async operations
-
-    // Simulate fetching data by delaying the reset of refreshing state
-    setTimeout(() => {
-      setData(DATA); // Replace with your actual refreshed data
-      setRefreshing(false);
-    }, 3000); // Adjust the delay as needed
+    fetchData().then(() => setRefreshing(false));
   }, []);
-
-  const renderRightAction = useCallback(
-    (item: Chore) => (
-      <TouchableOpacity
-        onPress={() => deleteItem(item.id)}
-        style={styles.rightAction}
-      >
-        <Text style={styles.actionText}>Delete</Text>
-      </TouchableOpacity>
-    ),
-    [deleteItem]
-  );
 
   const renderLeftAction = useCallback(
     (item: Chore) => (
       <TouchableOpacity
-        onPress={() => (deleteItem(item.id))}
+        onPress={() => deleteItem(item.id)}
         style={styles.leftAction}
       >
         <View
@@ -160,32 +185,49 @@ export default function List() {
             paddingHorizontal: "auto",
           }}
         >
-          <Icon name="check" size={40} color="white" />
+          {loadingChoreDone ? (
+            <ActivityIndicator size={40} color="white" />
+          ) : (
+            <Icon name="check" size={40} color="white" />
+          )}
         </View>
       </TouchableOpacity>
     ),
-    []
+    [loadingChoreDone]
   );
 
   const renderItem = useCallback(
-    ({ item, index }: { item: Chore, index: number }) => (
+    ({ item, index }: { item: Chore; index: number }) => (
       <>
-      <View style={styles.item}>
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "space-between",
-          }}
-        >
-          <Text style={{ color: "white", fontWeight: "bold" }}>{item.name}</Text>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-            <View><Icon name="time-outline" type="ionicon" color="white" size={20} /></View>
-            <Text style={{ color: "white", marginTop: -2 }}>{formatTimestamp(item.end)}</Text>
+        <View style={styles.item}>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
+            <Text style={{ color: "white", fontWeight: "bold" }}>
+              {item.name}
+            </Text>
+            <View
+              style={{ flexDirection: "row", alignItems: "center", gap: 5 }}
+            >
+              <View>
+                <Icon
+                  name="time-outline"
+                  type="ionicon"
+                  color="white"
+                  size={20}
+                />
+              </View>
+              <Text style={{ color: "white", marginTop: -2 }}>
+                {formatTimestamp(item.end)}
+              </Text>
+            </View>
           </View>
+          <Text style={{ color: "white", marginTop: 10 }}>{item.desc}</Text>
         </View>
-        <Text style={{ color: "white", marginTop: 10 }}>{item.desc}</Text>
-      </View>
       </>
     ),
     []
@@ -196,23 +238,42 @@ export default function List() {
     return <LoadingSkeleton />;
   }
 
+  const noItems: Chore = {
+    id: 'default-item-id',
+    users: [],
+    house: '',
+    start: 0,
+    end: 0,
+    done_at: null,
+    name: 'Faccende Finite!',
+    desc: 'Prova a scorrere verso il basso per vedere se ci sono aggiornamenti.',
+    is_done: false,
+    is_periodic: false,
+    cyclicality: 'Giornaliera',
+    day_of_week: null,
+    day_of_month: null,
+  };
+
   return (
     <View style={styles.container}>
       <SwipeableFlatList
-        
         swipeableProps={{
           friction: 3,
           leftThreshold: 100,
           overshootLeft: false,
           overshootRight: false,
         }}
-        data={visibleData}
+        data={visibleData.length > 0 ? visibleData : [noItems]}
         keyExtractor={(item) => item.id}
         enableOpenMultipleRows={false}
         renderItem={renderItem}
-        renderLeftActions={renderLeftAction}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        ItemSeparatorComponent={() => <View style={styles.separator} />}        
+        renderLeftActions={
+          visibleData.length > 0 ? renderLeftAction : undefined
+        }
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+        ItemSeparatorComponent={() => <View style={styles.separator} />}
       />
     </View>
   );
@@ -222,25 +283,47 @@ const LoadingSkeleton: React.FC = () => {
   // Implement your loading skeleton component
   // You can use libraries like Shimmer to create loading skeletons
   return (
-    <View style={{ flex: 1, justifyContent: "flex-start", alignItems: "flex-start", width: "100%" }}>
+    <View
+      style={{
+        flex: 1,
+        justifyContent: "flex-start",
+        alignItems: "flex-start",
+        width: "100%",
+      }}
+    >
       {[1, 2, 3, 4, 5, 6, 7].map((index) => (
-        <View style={[styles.item, {borderBottomWidth: 1, borderBottomColor: "#333"}]} key={index}>
         <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "space-between",
-          }}
+          style={[
+            styles.item,
+            { borderBottomWidth: 1, borderBottomColor: "#333" },
+          ]}
+          key={index}
         >
-          <Skeleton animation="wave" style={{ width: 100 }} />
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-            <View><Icon name="time-outline" type="ionicon" color="white" size={20} /></View>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
             <Skeleton animation="wave" style={{ width: 100 }} />
+            <View
+              style={{ flexDirection: "row", alignItems: "center", gap: 5 }}
+            >
+              <View>
+                <Icon
+                  name="time-outline"
+                  type="ionicon"
+                  color="white"
+                  size={20}
+                />
+              </View>
+              <Skeleton animation="wave" style={{ width: 100 }} />
+            </View>
           </View>
+          <Skeleton animation="wave" style={{ width: 200, marginTop: 10 }} />
+          <Skeleton animation="wave" style={{ width: 200, marginTop: 5 }} />
         </View>
-        <Skeleton animation="wave" style={{ width: 200, marginTop: 10 }} />
-        <Skeleton animation="wave" style={{ width: 200, marginTop: 5 }} />
-      </View>
       ))}
     </View>
   );
@@ -287,186 +370,3 @@ const styles = StyleSheet.create({
     padding: 20,
   },
 });
-
-const DATA: Chore[] = [
-  {
-    id: "1",
-    users: ["user1", "user2"],
-    house: "house1",
-    start: 1707612892, // Timestamp for a specific date and time
-    end: 1707612892, // Timestamp for a specific date and time
-    done_at: null,
-    name: "Grocery Shopping",
-    desc: "Purchase fresh produce, dairy products, and pantry essentials for the week.",
-    is_done: false,
-    is_periodic: false,
-    cyclicality: "Giornaliera",
-    day_of_week: null,
-    day_of_month: null,
-  },
-  {
-    id: "2",
-    users: ["user3"],
-    house: "house2",
-    start: 1707612892, // Timestamp for a specific date and time
-    end: 1707612892, // Timestamp for a specific date and time
-    done_at: null,
-    name: "Clean Living Room",
-    desc: "Dust surfaces, vacuum carpets, and organize items in the living room.",
-    is_done: false,
-    is_periodic: true,
-    cyclicality: "Settimanale",
-    day_of_week: 3, // Wednesday (0-6, Sunday to Saturday)
-    day_of_month: null,
-  },
-  {
-    id: "3",
-    users: ["user1", "user2"],
-    house: "house1",
-    start: 1707612892, // Timestamp for a specific date and time
-    end: 1707612892, // Timestamp for a specific date and time
-    done_at: null,
-    name: "Monthly Yard Work",
-    desc: "Trim bushes, mow the lawn, and remove any debris from the yard.",
-    is_done: false,
-    is_periodic: true,
-    cyclicality: "Mensile",
-    day_of_week: null,
-    day_of_month: 15, // On the 15th day of the month
-  },
-  {
-    id: "4",
-    users: ["user1", "user2"],
-    house: "house1",
-    start: 1707612892, // Timestamp for a specific date and time
-    end: 1707612892, // Timestamp for a specific date and time
-    done_at: null,
-    name: "Grocery Shopping",
-    desc: "Purchase fresh produce, dairy products, and pantry essentials for the week.",
-    is_done: false,
-    is_periodic: false,
-    cyclicality: "Giornaliera",
-    day_of_week: null,
-    day_of_month: null,
-  },
-  {
-    id: "5",
-    users: ["user3"],
-    house: "house2",
-    start: 1707612892, // Timestamp for a specific date and time
-    end: 1707612892, // Timestamp for a specific date and time
-    done_at: null,
-    name: "Clean Living Room",
-    desc: "Dust surfaces, vacuum carpets, and organize items in the living room.",
-    is_done: false,
-    is_periodic: true,
-    cyclicality: "Settimanale",
-    day_of_week: 3, // Wednesday (0-6, Sunday to Saturday)
-    day_of_month: null,
-  },
-  {
-    id: "6",
-    users: ["user1", "user2"],
-    house: "house1",
-    start: 1707612892, // Timestamp for a specific date and time
-    end: 1707612892, // Timestamp for a specific date and time
-    done_at: null,
-    name: "Monthly Yard Work",
-    desc: "Trim bushes, mow the lawn, and remove any debris from the yard.",
-    is_done: false,
-    is_periodic: true,
-    cyclicality: "Mensile",
-    day_of_week: null,
-    day_of_month: 15, // On the 15th day of the month
-  },
-  {
-    id: "7",
-    users: ["user1", "user2"],
-    house: "house1",
-    start: 1707612892, // Timestamp for a specific date and time
-    end: 1707612892, // Timestamp for a specific date and time
-    done_at: null,
-    name: "Grocery Shopping",
-    desc: "Purchase fresh produce, dairy products, and pantry essentials for the week.",
-    is_done: false,
-    is_periodic: false,
-    cyclicality: "Giornaliera",
-    day_of_week: null,
-    day_of_month: null,
-  },
-  {
-    id: "8",
-    users: ["user3"],
-    house: "house2",
-    start: 1707612892, // Timestamp for a specific date and time
-    end: 1707612892, // Timestamp for a specific date and time
-    done_at: null,
-    name: "Clean Living Room",
-    desc: "Dust surfaces, vacuum carpets, and organize items in the living room.",
-    is_done: false,
-    is_periodic: true,
-    cyclicality: "Settimanale",
-    day_of_week: 3, // Wednesday (0-6, Sunday to Saturday)
-    day_of_month: null,
-  },
-  {
-    id: "9",
-    users: ["user1", "user2"],
-    house: "house1",
-    start: 1707612892, // Timestamp for a specific date and time
-    end: 1707612892, // Timestamp for a specific date and time
-    done_at: null,
-    name: "Monthly Yard Work",
-    desc: "Trim bushes, mow the lawn, and remove any debris from the yard.",
-    is_done: false,
-    is_periodic: true,
-    cyclicality: "Mensile",
-    day_of_week: null,
-    day_of_month: 15, // On the 15th day of the month
-  },
-  {
-    id: "10",
-    users: ["user1", "user2"],
-    house: "house1",
-    start: 1707612892, // Timestamp for a specific date and time
-    end: 1707612892, // Timestamp for a specific date and time
-    done_at: null,
-    name: "Grocery Shopping",
-    desc: "Purchase fresh produce, dairy products, and pantry essentials for the week.",
-    is_done: false,
-    is_periodic: false,
-    cyclicality: "Giornaliera",
-    day_of_week: null,
-    day_of_month: null,
-  },
-  {
-    id: "11",
-    users: ["user3"],
-    house: "house2",
-    start: 1707612892, // Timestamp for a specific date and time
-    end: 1707612892, // Timestamp for a specific date and time
-    done_at: null,
-    name: "Clean Living Room",
-    desc: "Dust surfaces, vacuum carpets, and organize items in the living room.",
-    is_done: false,
-    is_periodic: true,
-    cyclicality: "Settimanale",
-    day_of_week: 3, // Wednesday (0-6, Sunday to Saturday)
-    day_of_month: null,
-  },
-  {
-    id: "12",
-    users: ["user1", "user2"],
-    house: "house1",
-    start: 1707612892, // Timestamp for a specific date and time
-    end: 1707612892, // Timestamp for a specific date and time
-    done_at: null,
-    name: "Monthly Yard Work",
-    desc: "Trim bushes, mow the lawn, and remove any debris from the yard.",
-    is_done: false,
-    is_periodic: true,
-    cyclicality: "Mensile",
-    day_of_week: null,
-    day_of_month: 15, // On the 15th day of the month
-  },
-];

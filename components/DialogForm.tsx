@@ -81,7 +81,7 @@ const DialogForm: React.FC<DialogFormProps> = ({ isVisible, onClose }) => {
       const bearerToken = await getToken()
 
       const response = await fetch(
-        "https://app-casa-backend.federicocervelli01.workers.dev/api/v1/user/house/users",
+        "https://app-casa-backend.federicocervelli01.workers.dev/api/v1/house/users",
         {
           method: "GET",
           headers: {
@@ -92,7 +92,7 @@ const DialogForm: React.FC<DialogFormProps> = ({ isVisible, onClose }) => {
       );
 
       if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
+        console.error("Error fetching data:", await response.json());
       }
 
       const apiResponse = await response.json();
@@ -242,19 +242,22 @@ const DialogForm: React.FC<DialogFormProps> = ({ isVisible, onClose }) => {
               }}
               renderItem={( item ) => (
                 <View style={styles.item}>
-                  <Text style={styles.selectedTextStyle}>{item.name}</Text>
-                  <Avatar rounded source={{ uri: item.image }} />
+                  <Text style={styles.selectedTextStyle}>{item.firstName} {item.lastName}</Text>
+                  <Avatar rounded source={{ uri: item.imageUrl }} />
                 </View>
               )}
               renderSelectedItem={(item, unSelect) => (
                 <TouchableOpacity onPress={() => unSelect && unSelect(item)}>
                   <View style={styles.selectedStyle}>
-                    <Avatar rounded source={{ uri: item.image }} />
+                    <Avatar rounded source={{ uri: item.imageUrl }} />
                   </View>
                 </TouchableOpacity>
               )}
             />
           </View>
+          <Button containerStyle={{ marginTop: 10 }} onPress={() => (null)}>
+            <Text style={{ color: "white" }}>Aggiungi</Text>
+          </Button>
         </View>
       </ScrollView>
     </Dialog>

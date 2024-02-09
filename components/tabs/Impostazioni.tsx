@@ -1,76 +1,139 @@
-import { useAuth, useUser } from "@clerk/clerk-expo";
+import {
+  useAuth,
+  useOrganization,
+  useOrganizationList,
+  useUser,
+} from "@clerk/clerk-expo";
 import { Avatar, Button, Divider, Icon, Text } from "@rneui/themed";
 import { useEffect, useState } from "react";
-import { View } from "react-native";
+import { DevSettings, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import InputField from "../InputField";
 
-const Impostazioni = () => {
-  const [houseCode, setHouseCode] = useState<string>("");
-  const [fetchedHouseCode, setFetchedHouseCode] = useState<string>("");
-  const [showHouseCodeField, setShowHouseCodeField] = useState<string>("");
+interface ImpostazioniProps {
+  currentMembership: string;
+  setCurrentMembership: React.Dispatch<React.SetStateAction<string>>;
+}
+
+const Impostazioni: React.FC<ImpostazioniProps> = ({ currentMembership, setCurrentMembership }) => {
+  const { getToken } = useAuth();
   const { user, isLoaded, isSignedIn } = useUser();
-  const { signOut, sessionId, getToken } = useAuth();
+  const [currentOrganizationDisplayName, setCurrentOrganizationDisplayName] =
+    useState("");
 
-  useEffect(() => {
-    setFetchedHouseCode(user?.organizationMemberships[0]?.organization.slug || "");
-  },[]);
+  const [inputFieldHouseValue, setInputFieldHouseValue] = useState("");
+  const [inputFieldEmailValue, setInputFieldEmailValue] = useState("");
 
+  // When user is signed in, get membership from parent
   useEffect(() => {
-    if (fetchedHouseCode !== "") {
-      setShowHouseCodeField(fetchedHouseCode);
-    } else {
-      setShowHouseCodeField("None");
+    try {
+      console.log("Memberships of user: " + currentMembership);
+      setCurrentOrganizationDisplayName(currentMembership);
+    } catch {
+      console.error("User is not an organization member");
     }
-    console.log(fetchedHouseCode);
-    console.log(showHouseCodeField);
-  }, [fetchedHouseCode]);
+  }, [isSignedIn]);
 
-  const handleHouseCodeChange = (value: string): void => {
-    setHouseCode(value);
-  };
+  // When membership changes, update display name
+  useEffect(() => {
+    if (!currentMembership || currentMembership === "") {
+      setCurrentOrganizationDisplayName("None");
+    } else {
+      setCurrentOrganizationDisplayName(currentMembership);
+    }
+  }, [currentMembership]);
 
   async function createHouse() {
-    console.log("Creating " + houseCode);
-    const result = await fetch(`https://app-casa-backend.federicocervelli01.workers.dev/api/v1/house/${houseCode}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${await getToken()}`,
+    console.log("Creating " + inputFieldHouseValue);
+    if (!inputFieldHouseValue || inputFieldHouseValue === "") {
+      console.error("You need to specify a house name!");
+      return;
+    }
+    const result = await fetch(
+      `https://app-casa-backend.federicocervelli01.workers.dev/api/v1/house/${inputFieldHouseValue}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${await getToken()}`,
+        },
       }
-    })
+    );
 
     if (result.ok) {
-      setFetchedHouseCode(houseCode);
+      setCurrentMembership(inputFieldHouseValue);
     }
 
-    console.log(result.status);
     console.log(await result.json());
   }
 
   async function leaveHouse() {
-    console.log("leaving " + fetchedHouseCode);
-    const result = await fetch("https://app-casa-backend.federicocervelli01.workers.dev/api/v1/user/house", {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${await getToken()}`,
+    console.log("Leaving " + currentMembership);
+    if (!currentMembership || currentMembership === "") {
+      console.error("You are not in an organization!");
+      return;
+    }
+    const result = await fetch(
+      "https://app-casa-backend.federicocervelli01.workers.dev/api/v1/user/house",
+      {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${await getToken()}`,
+        },
       }
-    })
+    );
 
-    if (result.ok) {
-      setFetchedHouseCode("")
-    } 
+    if (!result.ok) {
+      console.error(await result.json());
+      return;
+    }
 
+    setCurrentMembership("");
+  }
 
-    console.log(await result.json());
+  async function inviteHouse() {
+    console.log("Inviting " + inputFieldEmailValue);
+    if (!inputFieldEmailValue || inputFieldEmailValue === "") {
+      console.error("You need to specify a user email!");
+      return;
+    }
+
+    const result = await fetch(
+      `https://app-casa-backend.federicocervelli01.workers.dev/api/v1/invite`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${await getToken()}`,
+        },
+        body: JSON.stringify({ email: inputFieldEmailValue }),
+      }
+    );
+    const data = await result.json();
+
+    if (!result.ok) {
+      console.error(data);
+      return;
+    }
+
+    console.log(data);
+  }
+
+  function signOut(): void {
+    throw new Error("Function not implemented.");
   }
 
   return (
     <SafeAreaView
-      style={{ flex: 1, backgroundColor: "black", alignItems: "center" }}
+      style={{
+        flex: 1,
+        backgroundColor: "black",
+        alignItems: "center",
+        height: "100%",
+      }}
     >
-      {isLoaded && isSignedIn && (
+      {isSignedIn && (
         <>
           <Avatar
             size={"large"}
@@ -92,19 +155,31 @@ const Impostazioni = () => {
           </View>
           {/* <Button onPress={() => getToken()}>Get Token</Button> */}
           <Text style={{ color: "white" }}>
-            Current House: {showHouseCodeField}
+            Current House: {currentOrganizationDisplayName}
           </Text>
           <Divider style={{ marginTop: 20 }} />
-          <View style={{ width: "90%" }}>
+          <View style={{ width: "90%", height: "100%" }}>
             <InputField
-              label="House Code"
-              onInputChange={handleHouseCodeChange}
+              label="House Name"
+              onInputChange={setInputFieldHouseValue}
             />
             <Button onPress={createHouse}>Create House</Button>
             <Divider style={{ marginTop: 10 }} />
-            <Button onPress={() =>leaveHouse()}>Leave House</Button>
+            <Button onPress={() => leaveHouse()}>Leave House</Button>
             <Divider style={{ marginTop: 10 }} />
-            <Button onPress={async () => console.log(await getToken({template: "long-lived-token"})) }>Get Token</Button>
+            <InputField
+              label="Email to Invite"
+              onInputChange={setInputFieldEmailValue}
+            />
+            <Button onPress={() => inviteHouse()}>Invite to House</Button>
+            <Divider style={{ marginTop: 10 }} />
+            <Button
+              onPress={async () =>
+                console.log(await getToken({ template: "long-lived-token" }))
+              }
+            >
+              Get Token
+            </Button>
           </View>
         </>
       )}

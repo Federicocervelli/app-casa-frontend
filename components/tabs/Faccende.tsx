@@ -15,7 +15,12 @@ import { ScrollView } from "react-native-gesture-handler";
 import InputField from "../InputField";
 import DialogForm from "../DialogForm";
 
-const Faccende = () => {
+interface FaccendeProps {
+  currentMembership: string;
+  setCurrentMembership: React.Dispatch<React.SetStateAction<string>>;
+}
+
+const Faccende: React.FC<FaccendeProps> = ({ currentMembership, setCurrentMembership }) => {
   const { theme } = useTheme();
   const [openDialog, setOpenDialog] = useState(false);
 

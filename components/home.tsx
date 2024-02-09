@@ -1,32 +1,39 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Tab, Text, TabView, useTheme } from "@rneui/themed";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Impostazioni from "./tabs/Impostazioni";
 import Calendario from "./tabs/Calendario";
 import Faccende from "./tabs/Faccende";
 import { View } from "react-native";
-import { useUser } from "@clerk/clerk-expo";
+import { useUser, useOrganizationList  } from "@clerk/clerk-expo";
 
 function home() {
   const [index, setIndex] = React.useState(0);
   const { theme } = useTheme();
-  const { user, isLoaded } = useUser();
-
-  // State to track the user's externalId
-  const [userExternalId, setUserExternalId] = React.useState(user?.externalId);
+  const { isLoaded: isOrganizationListLoaded, userMemberships } = useOrganizationList({
+    userMemberships: {
+      infinite: true,
+    },
+  });
+  const [currentMembership, setCurrentMembership] = React.useState("");
 
   // Effect to update userExternalId when user's externalId changes
   React.useEffect(() => {
-    setUserExternalId(user?.externalId);
-    console.log("home sees: " + user?.externalId)
-  }, [user?.externalId]);
+    if (!isOrganizationListLoaded) return;
+    const membershipData = userMemberships?.data;
+    if (!membershipData) return;
+    const singleMembership = membershipData?.[0];
+    if (!singleMembership) return;
+    const membership = singleMembership.organization.slug;
+    setCurrentMembership(membership as string);
+  }, [isOrganizationListLoaded]);
 
   return (
     <View style={{ flex: 1, backgroundColor: "black" }}>
       <TabView value={index} onChange={setIndex} animationType="spring" disableSwipe={true}>
         <TabView.Item style={{ width: "100%" }}>
-          {isLoaded && userExternalId !== "" && userExternalId !== null && userExternalId !== undefined ? (
-            <Faccende />
+          {isOrganizationListLoaded && currentMembership !== "" && currentMembership !== null && currentMembership !== undefined ? (
+            <Faccende currentMembership={currentMembership} setCurrentMembership={setCurrentMembership} />
           ) : (
             <SafeAreaView style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
               <Text style={{ color: "white", textAlign: "center", fontSize: 30 }}>
@@ -39,7 +46,7 @@ function home() {
           <Calendario />
         </TabView.Item>
         <TabView.Item style={{ width: "100%" }}>
-          <Impostazioni />
+          <Impostazioni currentMembership={currentMembership} setCurrentMembership={setCurrentMembership} />
         </TabView.Item>
       </TabView>
 

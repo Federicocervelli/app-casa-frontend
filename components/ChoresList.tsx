@@ -18,7 +18,7 @@ import {
 
 import GmailStyleSwipeableRow from "./SwipeableRow";
 import { Icon, Skeleton, useTheme } from "@rneui/themed";
-import { useAuth } from "@clerk/clerk-expo";
+import { useAuth, useUser } from "@clerk/clerk-expo";
 
 //  To toggle LTR/RTL change to `true`
 I18nManager.allowRTL(false);
@@ -99,19 +99,26 @@ export default function List() {
   const [loading, setLoading] = useState(true);
   const [loadingChoreDone, setLoadingChoreDone] = useState(false);
   const { getToken } = useAuth();
+  const { user, isSignedIn, isLoaded } = useUser();
 
+  // Set loading when component mounts
+  useEffect(() => {
+    setLoading(true);
+  }, []);
+
+  // When user is loaded, fetch data
+  useEffect(() => {
+    if (isLoaded && isSignedIn ) {
+      onRefresh();
+    } 
+  }, [isLoaded]);
+
+  // When data changes, update visibleData
   useEffect(() => {
     setVisibleData(data.filter((chore) => !chore.is_done));
   }, [data]);
-
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  useEffect(() => {
-    console.log("loadingChoreDone:", loadingChoreDone);
-  }, [loadingChoreDone]);
-
+  
+  // Fetch data from API
   const fetchData = async () => {
     try {
       // Assuming you have a function to get the bearer token
@@ -128,20 +135,26 @@ export default function List() {
         }
       );
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-
       const apiResponse = await response.json();
+
+      if (!response.ok) {
+        console.error("Error fetching data:", apiResponse);
+        setData([]);
+        setLoading(false);
+        return;
+      }
 
       setData(apiResponse);
       setLoading(false);
     } catch (error) {
-      console.error("Error fetching data:", error);
+      console.error("Uncaught error fetching data:", error);
+      setData([]);
       setLoading(false);
+      return;
     }
   };
 
+  // Delete item from API and update data with response
   const deleteItem = useCallback(async (id: string) => {
     if (loadingChoreDone) {
       return;
@@ -167,6 +180,7 @@ export default function List() {
     setLoadingChoreDone(false);
   }, []);
 
+  // Refresh data 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     fetchData().then(() => setRefreshing(false));

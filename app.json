@@ -1,9 +1,9 @@
 {
   "expo": {
-    "name": "app-casa",
+    "name": "appcasa",
     
-    "slug": "app-casa",
-    "scheme": "app-casa",
+    "slug": "appcasa",
+    "scheme": "com.appcasa",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -31,6 +31,7 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
+      "@react-native-google-signin/google-signin",
       "expo-secure-store"
     ]
   }

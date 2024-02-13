@@ -14,25 +14,25 @@ import { useState } from "react";
 import { ScrollView } from "react-native-gesture-handler";
 import InputField from "../InputField";
 import DialogForm from "../DialogForm";
+import ChoreDetails from "../ChoreDetails";
+import { Chore, User } from "../../types/types";
+import { Session } from "@supabase/supabase-js";
 
 interface FaccendeProps {
-  currentMembership: string;
-  setCurrentMembership: React.Dispatch<React.SetStateAction<string>>;
+  house: string;
+  houseUsers: User[];
+  session: Session;
 }
 
-const Faccende: React.FC<FaccendeProps> = ({ currentMembership, setCurrentMembership }) => {
+const Faccende: React.FC<FaccendeProps> = ({ houseUsers, house, session }) => {
   const { theme } = useTheme();
   const [openDialog, setOpenDialog] = useState(false);
-
-  function handleNameChange(value: string): void {
-    throw new Error("Function not implemented.");
-  }
 
   return (
     <SafeAreaView
       style={{ flex: 1, backgroundColor: "black", alignItems: "center" }}
     >
-      <List />
+      <List houseUsers={houseUsers} session={session} />
 
       <FAB
         color={theme.colors.primary}
@@ -44,6 +44,8 @@ const Faccende: React.FC<FaccendeProps> = ({ currentMembership, setCurrentMember
       <DialogForm
         isVisible={openDialog}
         onClose={() => setOpenDialog(false)}
+        houseUsers={houseUsers}
+        session={session}
       />
     </SafeAreaView>
   );

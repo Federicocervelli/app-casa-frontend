@@ -3,6 +3,7 @@ import {
   useOrganization,
   useOrganizationList,
   useUser,
+  useClerk
 } from "@clerk/clerk-expo";
 import { Avatar, Button, Divider, Icon, Text } from "@rneui/themed";
 import { useEffect, useState } from "react";
@@ -18,6 +19,7 @@ interface ImpostazioniProps {
 const Impostazioni: React.FC<ImpostazioniProps> = ({ currentMembership, setCurrentMembership }) => {
   const { getToken } = useAuth();
   const { user, isLoaded, isSignedIn } = useUser();
+  const {signOut} = useClerk();
   const [currentOrganizationDisplayName, setCurrentOrganizationDisplayName] =
     useState("");
 
@@ -120,10 +122,6 @@ const Impostazioni: React.FC<ImpostazioniProps> = ({ currentMembership, setCurre
     console.log(data);
   }
 
-  function signOut(): void {
-    throw new Error("Function not implemented.");
-  }
-
   return (
     <SafeAreaView
       style={{
@@ -141,7 +139,7 @@ const Impostazioni: React.FC<ImpostazioniProps> = ({ currentMembership, setCurre
             source={{ uri: user?.imageUrl }}
             containerStyle={{ borderColor: "white", borderWidth: 2 }}
           />
-          <Divider style={{ marginTop: 10 }} />
+          <View style={{ marginTop: 10 }} />
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
             <Text h4 style={{ color: "white" }}>
               {user.fullName}
@@ -157,22 +155,22 @@ const Impostazioni: React.FC<ImpostazioniProps> = ({ currentMembership, setCurre
           <Text style={{ color: "white" }}>
             Current House: {currentOrganizationDisplayName}
           </Text>
-          <Divider style={{ marginTop: 20 }} />
+          <View style={{ marginTop: 20 }} />
           <View style={{ width: "90%", height: "100%" }}>
             <InputField
               label="House Name"
               onInputChange={setInputFieldHouseValue}
             />
             <Button onPress={createHouse}>Create House</Button>
-            <Divider style={{ marginTop: 10 }} />
+            <View style={{ marginTop: 10 }} />
             <Button onPress={() => leaveHouse()}>Leave House</Button>
-            <Divider style={{ marginTop: 10 }} />
+            <View style={{ marginTop: 10 }} />
             <InputField
               label="Email to Invite"
               onInputChange={setInputFieldEmailValue}
             />
             <Button onPress={() => inviteHouse()}>Invite to House</Button>
-            <Divider style={{ marginTop: 10 }} />
+            <View style={{ marginTop: 10 }} />
             <Button
               onPress={async () =>
                 console.log(await getToken({ template: "long-lived-token" }))

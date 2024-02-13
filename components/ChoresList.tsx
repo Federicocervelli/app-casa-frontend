@@ -6,6 +6,7 @@ import {
   I18nManager,
   ScrollView,
   ActivityIndicator,
+  Pressable,
 } from "react-native";
 import SwipeableFlatList from "rn-gesture-swipeable-flatlist";
 
@@ -17,27 +18,19 @@ import {
 } from "react-native-gesture-handler";
 
 import GmailStyleSwipeableRow from "./SwipeableRow";
-import { Icon, Skeleton, useTheme } from "@rneui/themed";
+import { Avatar, Icon, Skeleton, useTheme } from "@rneui/themed";
 import { useAuth, useUser } from "@clerk/clerk-expo";
+import { Chore, User } from "../types/types";
+import ChoreDetails from "./ChoreDetails";
+import { Session } from "@supabase/supabase-js";
 
 //  To toggle LTR/RTL change to `true`
 I18nManager.allowRTL(false);
 
-type Chore = {
-  id: string; // UUID (Primary Key)
-  users: string[]; // Array of UUIDs (Foreign Keys)
-  house: string; // UUID (Foreign Key)
-  start: number; // Timestamp
-  end: number; // Timestamp
-  done_at?: number | null; // Optional Timestamp
-  name: string; // Required
-  desc?: string | null; // Optional
-  is_done: boolean;
-  is_periodic: boolean; // Default: False
-  cyclicality: "Giornaliera" | "Settimanale" | "Mensile"; // Enumerated Type
-  day_of_week?: number | null; // Optional (0-6)
-  day_of_month?: number | null; // Optional (0-31)
-};
+interface ListProps {
+  houseUsers: User[];
+  session: Session;
+}
 
 function formatTimestamp(timestampInSeconds: number): string {
   const currentDate = new Date();
@@ -92,45 +85,38 @@ function formatTimestamp(timestampInSeconds: number): string {
   }
 }
 
-export default function List() {
-  const [data, setData] = useState<Chore[]>([]);
-  const [visibleData, setVisibleData] = useState<Chore[]>([]);
+export default function List({ houseUsers, session }: ListProps) {
+  const [chores, setChores] = useState<Chore[]>([]);
+  const [visibleChores, setVisibleChores] = useState<Chore[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingChoreDone, setLoadingChoreDone] = useState(false);
-  const { getToken } = useAuth();
-  const { user, isSignedIn, isLoaded } = useUser();
-
-  // Set loading when component mounts
-  useEffect(() => {
-    setLoading(true);
-  }, []);
+  const [openChoreDialog, setOpenChoreDialog] = useState<Chore | null>(null);
 
   // When user is loaded, fetch data
   useEffect(() => {
-    if (isLoaded && isSignedIn ) {
-      onRefresh();
-    } 
-  }, [isLoaded]);
+    fetchChoresFromApi();
+  }, []);
 
   // When data changes, update visibleData
   useEffect(() => {
-    setVisibleData(data.filter((chore) => !chore.is_done));
-  }, [data]);
-  
-  // Fetch data from API
-  const fetchData = async () => {
-    try {
-      // Assuming you have a function to get the bearer token
-      const bearerToken = await getToken();
+    const filteredByDone = chores.filter((chore) => !chore.is_done);
+    const filteredByUser = filteredByDone.filter((chore) =>
+      chore.users.includes(session.user.id)
+    );
+    setVisibleChores(filteredByUser);
+  }, [chores]);
 
+  // Fetch data from API
+  const fetchChoresFromApi = async () => {
+    try {
       const response = await fetch(
-        "https://app-casa-backend.federicocervelli01.workers.dev/api/v1/chores",
+        `${process.env.EXPO_PUBLIC_API_ENDPOINT}/api/v2/house/chores`,
         {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${bearerToken}`,
+            Authorization: `Bearer ${session.access_token}`,
           },
         }
       );
@@ -139,16 +125,16 @@ export default function List() {
 
       if (!response.ok) {
         console.error("Error fetching data:", apiResponse);
-        setData([]);
+        setChores([]);
         setLoading(false);
         return;
       }
 
-      setData(apiResponse);
+      setChores(apiResponse);
       setLoading(false);
     } catch (error) {
       console.error("Uncaught error fetching data:", error);
-      setData([]);
+      setChores([]);
       setLoading(false);
       return;
     }
@@ -156,18 +142,19 @@ export default function List() {
 
   // Delete item from API and update data with response
   const deleteItem = useCallback(async (id: string) => {
+    console.log("Deleting item with id: ", id);
     if (loadingChoreDone) {
       return;
     }
     setLoadingChoreDone(true);
 
     const result = await fetch(
-      `https://app-casa-backend.federicocervelli01.workers.dev/api/v1/chore/${id}/complete`,
+      `${process.env.EXPO_PUBLIC_API_ENDPOINT}/api/v2/chore/${id}/complete`,
       {
-        method: "POST",
+        method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${await getToken()}`,
+          Authorization: `Bearer ${session.access_token}`,
         },
       }
     );
@@ -176,15 +163,35 @@ export default function List() {
       console.error("Error deleting item:", result);
     }
 
-    setData(await result.json());
+    const response = await result.json();
+    const newChore = response[0];
+
+    // Find the index of the chore with the same ID as newChore
+    console.log(chores.map( (chore) => chore.id));
+    const indexToUpdate = chores.findIndex((chore) => chore.id === id);
+
+    if (indexToUpdate !== -1) {
+      // If a chore with the same ID is found, update the array
+      const updatedChores = [...chores];
+      updatedChores[indexToUpdate] = newChore;
+      setChores(updatedChores);
+    } else {
+      console.error("Chore with the same ID not found");
+    }
+
     setLoadingChoreDone(false);
   }, []);
 
-  // Refresh data 
+  // Refresh data
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    fetchData().then(() => setRefreshing(false));
+    fetchChoresFromApi().then(() => setRefreshing(false));
   }, []);
+
+  const handleItemPress = (item: Chore) => {
+    //console.log("Item pressed:", item);
+    setOpenChoreDialog(item);
+  };
 
   const renderLeftAction = useCallback(
     (item: Chore) => (
@@ -210,86 +217,118 @@ export default function List() {
     [loadingChoreDone]
   );
 
-  const renderItem = useCallback(
-    ({ item, index }: { item: Chore; index: number }) => (
-      <>
-        <View style={styles.item}>
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "space-between",
-            }}
-          >
-            <Text style={{ color: "white", fontWeight: "bold" }}>
-              {item.name}
-            </Text>
-            <View
-              style={{ flexDirection: "row", alignItems: "center", gap: 5 }}
-            >
-              <View>
-                <Icon
-                  name="time-outline"
-                  type="ionicon"
-                  color="white"
-                  size={20}
-                />
-              </View>
-              <Text style={{ color: "white", marginTop: -2 }}>
-                {formatTimestamp(item.end)}
-              </Text>
+  const renderItem = ({ item, index }: { item: Chore; index: number }) => (
+    <>
+      <Pressable
+        onPress={() => handleItemPress(item)}
+        style={({ pressed }) => [
+          {
+            backgroundColor: pressed ? "#222" : "#000",
+          },
+          styles.item,
+        ]}
+      >
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <Text style={{ color: "white", fontWeight: "bold" }}>
+            {item.name}
+          </Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+            <View>
+              <Icon
+                name="time-outline"
+                type="ionicon"
+                color="white"
+                size={20}
+              />
             </View>
+            <Text style={{ color: "white", marginTop: -2 }}>
+              {formatTimestamp(item.end)}
+            </Text>
           </View>
-          <Text style={{ color: "white", marginTop: 10 }}>{item.desc}</Text>
         </View>
-      </>
-    ),
-    []
+        <Text style={{ color: "white", marginTop: 10 }}>{item.desc}</Text>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "flex-end",
+            width: "100%",
+          }}
+        >
+          <View
+            style={{ flexDirection: "row", alignItems: "center", gap: -10 }}
+          >
+            {item.users.map((user, index) => (
+              <Avatar
+                rounded={true}
+                key={index}
+                size={20}
+                source={{ uri: getUserImage(user, houseUsers) }}
+              />
+            ))}
+          </View>
+        </View>
+      </Pressable>
+    </>
   );
 
   if (loading) {
-    // Show loading skeleton or any other loading indicator
     return <LoadingSkeleton />;
   }
 
   const noItems: Chore = {
-    id: 'default-item-id',
+    id: "default-item-id",
     users: [],
-    house: '',
+    house: "",
     start: 0,
     end: 0,
     done_at: null,
-    name: 'Faccende Finite!',
-    desc: 'Prova a scorrere verso il basso per vedere se ci sono aggiornamenti.',
+    name: "Faccende Finite!",
+    desc: "Prova a scorrere verso il basso per vedere se ci sono aggiornamenti.",
     is_done: false,
     is_periodic: false,
-    cyclicality: 'Giornaliera',
+    cyclicality: "Giornaliera",
     day_of_week: null,
     day_of_month: null,
+    created_by: "",
+    created_at: 0,
   };
 
   return (
-    <View style={styles.container}>
-      <SwipeableFlatList
-        swipeableProps={{
-          friction: 3,
-          leftThreshold: 100,
-          overshootLeft: false,
-          overshootRight: false,
-        }}
-        data={visibleData.length > 0 ? visibleData : [noItems]}
-        keyExtractor={(item) => item.id}
-        enableOpenMultipleRows={false}
-        renderItem={renderItem}
-        renderLeftActions={
-          visibleData.length > 0 ? renderLeftAction : undefined
-        }
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-        ItemSeparatorComponent={() => <View style={styles.separator} />}
+    <>
+      <View style={styles.container}>
+        <SwipeableFlatList
+          swipeableProps={{
+            friction: 3,
+            leftThreshold: 100,
+            overshootLeft: false,
+            overshootRight: false,
+          }}
+          data={visibleChores.length > 0 ? visibleChores : [noItems]}
+          keyExtractor={(item) => item.id}
+          enableOpenMultipleRows={false}
+          renderItem={renderItem}
+          renderLeftActions={
+            visibleChores.length > 0 ? renderLeftAction : undefined
+          }
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+          ItemSeparatorComponent={() => <View style={styles.separator} />}
+        />
+      </View>
+      <ChoreDetails
+        houseUsers={houseUsers}
+        item={openChoreDialog}
+        onClose={() => setOpenChoreDialog(null)}
       />
-    </View>
+    </>
   );
 }
 
@@ -297,49 +336,51 @@ const LoadingSkeleton: React.FC = () => {
   // Implement your loading skeleton component
   // You can use libraries like Shimmer to create loading skeletons
   return (
-    <View
-      style={{
-        flex: 1,
-        justifyContent: "flex-start",
-        alignItems: "flex-start",
-        width: "100%",
-      }}
-    >
-      {[1, 2, 3, 4, 5, 6, 7].map((index) => (
-        <View
-          style={[
-            styles.item,
-            { borderBottomWidth: 1, borderBottomColor: "#333" },
-          ]}
-          key={index}
-        >
+    <>
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "flex-start",
+          alignItems: "flex-start",
+          width: "100%",
+        }}
+      >
+        {[1, 2, 3, 4, 5, 6, 7].map((index) => (
           <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "space-between",
-            }}
+            style={[
+              styles.item,
+              { borderBottomWidth: 1, borderBottomColor: "#333" },
+            ]}
+            key={index}
           >
-            <Skeleton animation="wave" style={{ width: 100 }} />
             <View
-              style={{ flexDirection: "row", alignItems: "center", gap: 5 }}
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
             >
-              <View>
-                <Icon
-                  name="time-outline"
-                  type="ionicon"
-                  color="white"
-                  size={20}
-                />
-              </View>
               <Skeleton animation="wave" style={{ width: 100 }} />
+              <View
+                style={{ flexDirection: "row", alignItems: "center", gap: 5 }}
+              >
+                <View>
+                  <Icon
+                    name="time-outline"
+                    type="ionicon"
+                    color="white"
+                    size={20}
+                  />
+                </View>
+                <Skeleton animation="wave" style={{ width: 100 }} />
+              </View>
             </View>
+            <Skeleton animation="wave" style={{ width: 200, marginTop: 10 }} />
+            <Skeleton animation="wave" style={{ width: 200, marginTop: 5 }} />
           </View>
-          <Skeleton animation="wave" style={{ width: 200, marginTop: 10 }} />
-          <Skeleton animation="wave" style={{ width: 200, marginTop: 5 }} />
-        </View>
-      ))}
-    </View>
+        ))}
+      </View>
+    </>
   );
 };
 
@@ -363,7 +404,6 @@ const styles = StyleSheet.create({
   item: {
     width: "100%",
     padding: 20,
-    backgroundColor: "#000",
   },
   rightAction: {
     backgroundColor: "red",
@@ -384,3 +424,10 @@ const styles = StyleSheet.create({
     padding: 20,
   },
 });
+function getUserImage(item: string, houseUsers: User[]): string | undefined {
+  const user = houseUsers?.find((user) => user.id === item);
+  if (user) {
+    return user.avatar_url;
+  }
+  return undefined;
+}

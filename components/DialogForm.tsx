@@ -6,7 +6,7 @@ import {
   Text,
   View,
   TouchableOpacity,
-  Dimensions 
+  Dimensions,
 } from "react-native";
 import InputField from "./InputField";
 import { Avatar, Button, Dialog, Icon, useTheme } from "@rneui/themed";
@@ -15,15 +15,17 @@ import { OutlinedTextField } from "rn-material-ui-textfield";
 import { MultiSelect } from "react-native-element-dropdown";
 import AntDesign from "@expo/vector-icons/AntDesign";
 import { useAuth } from "@clerk/clerk-expo";
+import { User } from "../types/types";
+import { Session } from "@supabase/supabase-js";
 
 interface DialogFormProps {
   isVisible: boolean;
   onClose: () => void;
+  houseUsers: User[];
+  session: Session;
 }
 
-const DialogForm: React.FC<DialogFormProps> = ({ isVisible, onClose }) => {
-
-  const {getToken} = useAuth();
+const DialogForm: React.FC<DialogFormProps> = ({ isVisible, onClose, houseUsers, session }) => {
 
   const { theme } = useTheme();
 
@@ -33,20 +35,12 @@ const DialogForm: React.FC<DialogFormProps> = ({ isVisible, onClose }) => {
   const [time, setTime] = useState(new Date());
   const [mode, setMode] = useState("date");
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showTimePicker, setShowTimePicker] = useState(false);
-  const [selectedUsers, setSelectedUsers] = useState([]);
-  const [houseUsers, setHouseUsers] = useState([]);
-  const [usersLoading, setUsersLoading] = useState(false);
-  const pickerRef = useRef();
-
-  useEffect(() => {
-    console.log("time:", time);
-  },[time]);
+  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
 
   const onChange = (event, selectedDate) => {
     const currentDate = selectedDate;
     setShowDatePicker(false);
-    if(mode === "date"){
+    if (mode === "date") {
       setDate(currentDate);
     } else {
       setTime(currentDate);
@@ -64,7 +58,7 @@ const DialogForm: React.FC<DialogFormProps> = ({ isVisible, onClose }) => {
 
   const showTimepicker = () => {
     showMode("time");
-  }
+  };
 
   const handleNameChange = (value: string): void => {
     setName(value);
@@ -74,48 +68,75 @@ const DialogForm: React.FC<DialogFormProps> = ({ isVisible, onClose }) => {
     setDescription(value);
   };
 
-  const fetchDataFromApi = async () => {
-    try {
-      setUsersLoading(true);
-      // Assuming you have a function to get the bearer token
-      const bearerToken = await getToken()
-
-      const response = await fetch(
-        "https://app-casa-backend.federicocervelli01.workers.dev/api/v1/house/users",
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${bearerToken}`,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        console.error("Error fetching data:", await response.json());
-      }
-
-      const apiResponse = await response.json();
-
-      setHouseUsers(apiResponse);
-      setUsersLoading(false);
-    } catch (error) {
-      console.error("Error fetching data:", error);
-      setUsersLoading(false);
+  async function handleSubmit() {
+    //validate fields
+    if (!name || !description || !date || !time || !selectedUsers) {
+      console.error("Missing fields");
+      return;
     }
-  };
 
-  useEffect(() => {
-    // Call the function to fetch data when the component mounts
-    fetchDataFromApi();
-  }, []);
+    // Extract components from date
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const day = date.getDate();
+    const hour = time.getHours();
+    const minute = time.getMinutes();
+    const combinedDateTime = new Date(year, month, day, hour, minute);
+    const timestamp = combinedDateTime.getTime() / 1000;
+
+    // Send data to API
+    console.log("name:", name);
+    console.log("desc:", description);
+    console.log("end:", timestamp);
+    console.log("users:", selectedUsers);
+
+    const result = await fetch(
+      `${process.env.EXPO_PUBLIC_API_ENDPOINT}/api/v2/chores`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          name,
+          desc: description,
+          end: timestamp,
+          users: selectedUsers,
+        })
+      }
+    )
+
+    if (result.ok) {
+      console.log("Chore created successfully");
+    }
+    else {
+      console.error("Error creating chore:", await result.json());
+    }
+
+    // reset fields
+    setName("");
+    setDescription("");
+    setDate(new Date());
+    setTime(new Date());
+    setSelectedUsers([]);
+
+    // Close the dialog
+    onClose();
+    // TODO: Call refresh
+  }
 
   // Add any other logic you need here, for example, handling form submission
 
-
   return (
     <Dialog
-      overlayStyle={{ backgroundColor: "#111", width: "90%", borderColor: "#555", borderWidth: 1, borderRadius: 10 }}
+      overlayStyle={{
+        backgroundColor: "#111",
+        width: "90%",
+        borderColor: "#555",
+        borderWidth: 1,
+        borderRadius: 10,
+      }}
       backdropStyle={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
       isVisible={isVisible}
       onBackdropPress={onClose}
@@ -164,13 +185,7 @@ const DialogForm: React.FC<DialogFormProps> = ({ isVisible, onClose }) => {
             <Button
               buttonStyle={{ borderRadius: 999, width: 50, height: 50 }}
               containerStyle={{ marginLeft: 10, marginTop: -7 }}
-              icon={
-                <Icon
-                  name="calendar-month"
-                  color="white"
-                  
-                />
-              }
+              icon={<Icon name="calendar-month" color="white" />}
               onPress={showDatepicker}
             ></Button>
           </View>
@@ -196,13 +211,7 @@ const DialogForm: React.FC<DialogFormProps> = ({ isVisible, onClose }) => {
             <Button
               buttonStyle={{ borderRadius: 999, width: 50, height: 50 }}
               containerStyle={{ marginLeft: 10, marginTop: -7 }}
-              icon={
-                <AntDesign
-                  name="clockcircle"
-                  color="white"
-                  size={20}
-                />
-              }
+              icon={<AntDesign name="clockcircle" color="white" size={20} />}
               onPress={showTimepicker}
             ></Button>
           </View>
@@ -217,7 +226,6 @@ const DialogForm: React.FC<DialogFormProps> = ({ isVisible, onClose }) => {
             />
           )}
 
-
           <View style={styles.container}>
             <MultiSelect
               style={styles.dropdown}
@@ -225,37 +233,50 @@ const DialogForm: React.FC<DialogFormProps> = ({ isVisible, onClose }) => {
               selectedTextStyle={styles.selectedTextStyle}
               activeColor={theme.colors.primary}
               alwaysRenderSelectedItem
-              containerStyle={{ minWidth: "90%", borderRadius: 8, overflow: "hidden", backgroundColor: "#222", borderColor: "#555", borderWidth: 1 }}
+              containerStyle={{
+                minWidth: "90%",
+                borderRadius: 8,
+                overflow: "hidden",
+                backgroundColor: "#222",
+                borderColor: "#555",
+                borderWidth: 1,
+              }}
               maxHeight={500}
-              backgroundColor='rgba(0, 0, 0, 0.5)'
+              backgroundColor="rgba(0, 0, 0, 0.5)"
               iconStyle={styles.iconStyle}
               iconColor="white"
               mode="modal"
               data={houseUsers}
-              labelField="label"
-              valueField="value"
+              labelField="display_name"
+              valueField="id"
               placeholder="Seleziona utenti"
-              key={"users"}
               value={selectedUsers}
-              onChange={(item) => {
-                setSelectedUsers(item);
+              onChange={(items) => {
+                console.log("Selected items: ", items);
+                // Extract user ids from selected items
+                setSelectedUsers(items);
               }}
-              renderItem={( item ) => (
+              renderItem={(item) => (
                 <View style={styles.item}>
-                  <Text style={styles.selectedTextStyle}>{item.firstName} {item.lastName}</Text>
-                  <Avatar rounded source={{ uri: item.imageUrl }} />
+                  <Text style={styles.selectedTextStyle}>
+                    {item.display_name}
+                  </Text>
+                  <Avatar rounded source={{ uri: item.avatar_url }} />
                 </View>
               )}
               renderSelectedItem={(item, unSelect) => (
                 <TouchableOpacity onPress={() => unSelect && unSelect(item)}>
                   <View style={styles.selectedStyle}>
-                    <Avatar rounded source={{ uri: item.imageUrl }} />
+                    <Avatar rounded source={{ uri: item.avatar_url }} />
                   </View>
                 </TouchableOpacity>
               )}
             />
           </View>
-          <Button containerStyle={{ marginTop: 10 }} onPress={() => (null)}>
+          <Button
+            containerStyle={{ marginTop: 10 }}
+            onPress={() => handleSubmit()}
+          >
             <Text style={{ color: "white" }}>Aggiungi</Text>
           </Button>
         </View>
@@ -308,7 +329,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 12,
     marginRight: 12,
-    
   },
   textSelectedStyle: {
     marginRight: 5,

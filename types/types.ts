@@ -23,5 +23,12 @@ type User = {
   id: string;
 };
 
+type House = {
+  id: string;
+  slug: string;
+  name: string;
+  created_by: string;
+}
+
 // Export each type individually
-export { Chore, User };
+export { Chore, User, House };

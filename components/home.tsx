@@ -5,24 +5,29 @@ import Impostazioni from "./tabs/Impostazioni";
 import Calendario from "./tabs/Calendario";
 import Faccende from "./tabs/Faccende";
 import { ActivityIndicator, View } from "react-native";
-import { useUser, useOrganizationList, useAuth } from "@clerk/clerk-expo";
 import { supabase } from "../utils/supabase";
 
-import { User } from "../types/types";
+import { House, User } from "../types/types";
 import { Session } from "@supabase/supabase-js";
 
 function home({ session }: { session: Session }) {
   const [index, setIndex] = React.useState(0);
   const { theme } = useTheme();
   const [loaded, setLoaded] = React.useState(false);
-  const [house, setHouse] = useState(null);
+  const [house, setHouse] = useState<House|null>(null);
   const [houseUsers, setHouseUsers] = useState<User[]>([]);
 
   React.useEffect(() => {
-    fetchHouseFromApi();
-    fetchHouseUsersFromApi();
-    setLoaded(true);
+    Promise.all([fetchHouseFromApi(), fetchHouseUsersFromApi()])
+    .then(() => setLoaded(true))
+    .catch((error) => console.error(error));
   }, []);
+
+  const handleHouseChange = async () => {
+    setLoaded(false);
+    await fetchHouseUsersFromApi();
+    setLoaded(true);
+  }
 
   const fetchHouseUsersFromApi = async () => {
     try {
@@ -94,6 +99,7 @@ function home({ session }: { session: Session }) {
               <SafeAreaView
                 style={{
                   flex: 1,
+                  backgroundColor: "black",
                   alignItems: "center",
                   justifyContent: "center",
                 }}
@@ -101,15 +107,22 @@ function home({ session }: { session: Session }) {
                 <Text
                   style={{ color: "white", textAlign: "center", fontSize: 30 }}
                 >
-                  Non hai nessuna casa. Perfavore entra in una casa nelle
+                  Non hai nessuna casa. Per favore entra o crea una casa nelle
                   impostazioni.
                 </Text>
               </SafeAreaView>
             )
           ) : (
-            <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-              <ActivityIndicator size="large" color="white" />
-            </View>
+            <SafeAreaView
+                style={{
+                  flex: 1,
+                  backgroundColor: "black",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <ActivityIndicator size="large" color={theme.colors.primary} />
+              </SafeAreaView>
           )}
         </TabView.Item>
         <TabView.Item style={{ width: "100%" }}>
@@ -119,6 +132,8 @@ function home({ session }: { session: Session }) {
           <Impostazioni
             house={house}
             setHouse={setHouse}
+            session={session}
+            handleHouseChange={handleHouseChange}
           />
         </TabView.Item>
       </TabView>

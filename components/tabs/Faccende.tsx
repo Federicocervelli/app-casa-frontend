@@ -15,11 +15,11 @@ import { ScrollView } from "react-native-gesture-handler";
 import InputField from "../InputField";
 import DialogForm from "../DialogForm";
 import ChoreDetails from "../ChoreDetails";
-import { Chore, User } from "../../types/types";
+import { Chore, House, User } from "../../types/types";
 import { Session } from "@supabase/supabase-js";
 
 interface FaccendeProps {
-  house: string;
+  house: House;
   houseUsers: User[];
   session: Session;
 }

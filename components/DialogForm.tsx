@@ -14,7 +14,6 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { OutlinedTextField } from "rn-material-ui-textfield";
 import { MultiSelect } from "react-native-element-dropdown";
 import AntDesign from "@expo/vector-icons/AntDesign";
-import { useAuth } from "@clerk/clerk-expo";
 import { User } from "../types/types";
 import { Session } from "@supabase/supabase-js";
 

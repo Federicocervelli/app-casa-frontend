@@ -1,25 +1,19 @@
-import React, { Component, useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   StyleSheet,
   Text,
   View,
   I18nManager,
-  ScrollView,
   ActivityIndicator,
   Pressable,
 } from "react-native";
 import SwipeableFlatList from "rn-gesture-swipeable-flatlist";
 
 import {
-  FlatList,
-  RectButton,
   RefreshControl,
   TouchableOpacity,
 } from "react-native-gesture-handler";
-
-import GmailStyleSwipeableRow from "./SwipeableRow";
-import { Avatar, Icon, Skeleton, useTheme } from "@rneui/themed";
-import { useAuth, useUser } from "@clerk/clerk-expo";
+import { Avatar, Icon, Skeleton } from "@rneui/themed";
 import { Chore, User } from "../types/types";
 import ChoreDetails from "./ChoreDetails";
 import { Session } from "@supabase/supabase-js";

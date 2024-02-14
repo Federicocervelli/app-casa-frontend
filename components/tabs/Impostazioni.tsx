@@ -5,6 +5,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import InputField from "../InputField";
 import { Session } from "@supabase/supabase-js";
 import { House } from "../../types/types";
+import { supabase } from "../../utils/supabase";
+import { GoogleSignin } from "@react-native-google-signin/google-signin";
 
 interface ImpostazioniProps {
   house: House | null;
@@ -114,7 +116,7 @@ const Impostazioni: React.FC<ImpostazioniProps> = ({
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${process.env.EXPO_PUBLIC_API_KEY}`,
+          Authorization: `Bearer ${session.access_token}`,
         }
       }
     );
@@ -130,6 +132,17 @@ const Impostazioni: React.FC<ImpostazioniProps> = ({
     handleHouseChange();
     setInputFieldJoinSlugValue("");
   }
+
+  const logOut = async () => {
+    try {
+      await GoogleSignin.revokeAccess();
+      await GoogleSignin.signOut();
+      await supabase.auth.signOut();
+      console.log(session)
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
   return (
     <SafeAreaView
@@ -157,7 +170,7 @@ const Impostazioni: React.FC<ImpostazioniProps> = ({
               name="log-out"
               type="entypo"
               color={"white"}
-              onPress={() => signOut()}
+              onPress={() => logOut()}
             />
           </View>
           {/* <Button onPress={() => getToken()}>Get Token</Button> */}

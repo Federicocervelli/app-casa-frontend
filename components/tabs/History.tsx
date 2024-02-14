@@ -1,16 +1,17 @@
 import { Text } from "@rneui/themed";
+import { ScrollView } from "react-native-gesture-handler";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const Calendario = () => {
+const History = () => {
   return (
     <SafeAreaView
       style={{ flex: 1, backgroundColor: "black", alignItems: "center" }}
     >
-      <Text h1 style={{ color: "white", textAlign: "center" }}>
-        Calendario
-      </Text>
+      <ScrollView>
+        <Text style={{ color: "white" }}>History</Text>
+      </ScrollView>
     </SafeAreaView>
   );
 };
 
-export default Calendario;
+export default History;

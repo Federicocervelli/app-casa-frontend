@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Tab, Text, TabView, useTheme } from "@rneui/themed";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Impostazioni from "./tabs/Impostazioni";
-import Calendario from "./tabs/Calendario";
+import History from "./tabs/History";
 import Faccende from "./tabs/Faccende";
 import { ActivityIndicator, View } from "react-native";
 import { supabase } from "../utils/supabase";
@@ -126,7 +126,7 @@ function home({ session }: { session: Session }) {
           )}
         </TabView.Item>
         <TabView.Item style={{ width: "100%" }}>
-          <Calendario />
+          <History />
         </TabView.Item>
         <TabView.Item style={{ width: "100%" }}>
           <Impostazioni
@@ -163,7 +163,7 @@ function home({ session }: { session: Session }) {
         <Tab.Item
           titleStyle={{ fontSize: 12 }}
           icon={{
-            name: "calendar",
+            name: "time",
             type: "ionicon",
             color: index === 1 ? "white" : theme.colors.grey3,
           }}

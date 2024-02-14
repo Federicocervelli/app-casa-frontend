@@ -9,11 +9,8 @@ import {
 } from "react-native";
 import SwipeableFlatList from "rn-gesture-swipeable-flatlist";
 
-import {
-  RefreshControl,
-  TouchableOpacity,
-} from "react-native-gesture-handler";
-import { Avatar, Icon, Skeleton } from "@rneui/themed";
+import { RefreshControl, TouchableOpacity } from "react-native-gesture-handler";
+import { Avatar, Badge, Icon, Skeleton } from "@rneui/themed";
 import { Chore, User } from "../types/types";
 import ChoreDetails from "./ChoreDetails";
 import { Session } from "@supabase/supabase-js";
@@ -24,6 +21,7 @@ I18nManager.allowRTL(false);
 interface ListProps {
   houseUsers: User[];
   session: Session;
+  filterType: string;
 }
 
 function formatTimestamp(timestampInSeconds: number): string {
@@ -79,27 +77,37 @@ function formatTimestamp(timestampInSeconds: number): string {
   }
 }
 
-export default function List({ houseUsers, session }: ListProps) {
+export default function List({ houseUsers, session, filterType }: ListProps) {
   const [chores, setChores] = useState<Chore[]>([]);
   const [visibleChores, setVisibleChores] = useState<Chore[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingChoreDone, setLoadingChoreDone] = useState(false);
   const [openChoreDialog, setOpenChoreDialog] = useState<Chore | null>(null);
+  const nowTimestampInSeconds = Math.floor(Date.now() / 1000);
 
   // When user is loaded, fetch data
   useEffect(() => {
     fetchChoresFromApi();
   }, []);
 
-  // When data changes, update visibleData
+  // When data changes, update visibleData according with filter
   useEffect(() => {
-    const filteredByDone = chores.filter((chore) => !chore.is_done);
-    const filteredByUser = filteredByDone.filter((chore) =>
-      chore.users.includes(session.user.id)
-    );
-    setVisibleChores(filteredByUser);
-  }, [chores]);
+    switch (filterType) {
+      case "My Chores":
+        setVisibleChores(
+          chores.filter((chore) => chore.users.includes(session.user.id))
+        );
+        break;
+      case "Created Chores":
+        setVisibleChores(
+          chores.filter((chore) => chore.created_by === session.user.id)
+        );
+        break;
+      default:
+        setVisibleChores(chores);
+    }
+  }, [chores, filterType]);
 
   // Fetch data from API
   const fetchChoresFromApi = async () => {
@@ -136,7 +144,7 @@ export default function List({ houseUsers, session }: ListProps) {
 
   // Delete item from API and update data with response
   const deleteItem = useCallback(async (id: string) => {
-    console.log("Deleting item with id: ", id);
+    console.log("Completing chore with id: ", id);
     if (loadingChoreDone) {
       return;
     }
@@ -161,7 +169,7 @@ export default function List({ houseUsers, session }: ListProps) {
     const newChore = response[0];
 
     // Find the index of the chore with the same ID as newChore
-    console.log(chores.map( (chore) => chore.id));
+    console.log(chores.map((chore) => chore.id));
     const indexToUpdate = chores.findIndex((chore) => chore.id === id);
 
     if (indexToUpdate !== -1) {
@@ -246,15 +254,57 @@ export default function List({ houseUsers, session }: ListProps) {
             </Text>
           </View>
         </View>
-        <Text style={{ color: "white", marginTop: 10 }}>{item.desc}</Text>
         <View
           style={{
+            marginTop: 10,
+            alignSelf: "flex-start",
             flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "flex-end",
+            gap: 5,
+            justifyContent: "space-between",
             width: "100%",
+            alignItems: "center",
           }}
         >
+          {item.is_done ? (
+            <Text
+              style={{
+                backgroundColor: "green",
+                paddingVertical: 3,
+                paddingHorizontal: 8,
+                borderRadius: 99,
+                color: "white",
+                textAlign: "center",
+              }}
+            >
+              Completed
+            </Text>
+          ) : item.end < nowTimestampInSeconds ? (
+            <Text
+              style={{
+                backgroundColor: "red", // or another color you prefer for expired
+                paddingVertical: 3,
+                paddingHorizontal: 8,
+                borderRadius: 99,
+                color: "white",
+                textAlign: "center",
+              }}
+            >
+              Expired
+            </Text>
+          ) : (
+            <Text
+              style={{
+                backgroundColor: "gray",
+                paddingVertical: 3,
+                paddingHorizontal: 8,
+                borderRadius: 99,
+                color: "white",
+                textAlign: "center",
+              }}
+            >
+              Pending
+            </Text>
+          )}
           <View
             style={{ flexDirection: "row", alignItems: "center", gap: -10 }}
           >
@@ -262,7 +312,7 @@ export default function List({ houseUsers, session }: ListProps) {
               <Avatar
                 rounded={true}
                 key={index}
-                size={20}
+                size={25}
                 source={{ uri: getUserImage(user, houseUsers) }}
               />
             ))}

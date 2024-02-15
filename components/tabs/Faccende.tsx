@@ -20,16 +20,41 @@ import { Chore, House, User } from "../../types/types";
 import { Session } from "@supabase/supabase-js";
 import { IconNode } from "@rneui/base";
 import { AppContext } from "../../hooks/AppCasaProvider";
+import { createStackNavigator } from "@react-navigation/stack";
 
-
+const Stack = createStackNavigator();
 
 const Faccende = () => {
-  const filterTypes = ["My Chores", "Created Chores", "All Chores"];
   const { theme } = useTheme();
-  const [openNewChoreDialog, setOpenNewChoreDialog] = useState(false);
+  return (
+    <Stack.Navigator
+      initialRouteName="List"
+      screenOptions={{ headerStyle: { backgroundColor: theme.colors.bgPrimary } }}
+    >
+      <Stack.Screen
+        name="List"
+        component={ListScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="Add Chore"
+        component={AddChoreScreen}
+        options={{ headerShown: true }}
+      />
+    </Stack.Navigator>
+  );
+};
+
+const ListScreen = ({ navigation }: any) => {
+  const { theme } = useTheme();
+  const filterTypes = ["My Chores", "Created Chores", "All Chores"];
   const [speedDialOpen, setSpeedDialOpen] = useState(false);
   const [filterType, setFilterType] = useState("My Chores");
-  const [icon, setIcon] = useState<IconNode>({ name: "person", type: "ionicon", color: "#fff" });
+  const [icon, setIcon] = useState<IconNode>({
+    name: "person",
+    type: "ionicon",
+    color: "#fff",
+  });
   const { state, dispatch } = useContext(AppContext);
   const { session, houseUsers } = state;
 
@@ -37,7 +62,7 @@ const Faccende = () => {
     // Find the index of the current filter type in the array
     const currentIndex = filterTypes.indexOf(filterType);
     // Calculate the index of the next filter type, cycling back to the beginning if needed
-    const nextIndex = (currentIndex + 1) % filterTypes.length;  
+    const nextIndex = (currentIndex + 1) % filterTypes.length;
     // Set the next filter type and update the icon dynamically
     setFilterType(filterTypes[nextIndex]);
   };
@@ -46,25 +71,44 @@ const Faccende = () => {
     // Update the icon dynamically based on the current filterType
     switch (filterType) {
       case "My Chores":
-        setIcon({ name: "person", type: "ionicon", color: theme.colors.onBgPrimary });
+        setIcon({
+          name: "person",
+          type: "ionicon",
+          color: theme.colors.onBgPrimary,
+        });
         break;
       case "Created Chores":
-        setIcon({ name: "person-add", type: "ionicon", color: theme.colors.onBgPrimary });
+        setIcon({
+          name: "person-add",
+          type: "ionicon",
+          color: theme.colors.onBgPrimary,
+        });
         break;
       case "All Chores":
-        setIcon({ name: "list", type: "ionicon", color: theme.colors.onBgPrimary });
+        setIcon({
+          name: "list",
+          type: "ionicon",
+          color: theme.colors.onBgPrimary,
+        });
         break;
       default:
-        setIcon({ name: "person", type: "ionicon", color: theme.colors.onBgPrimary });
+        setIcon({
+          name: "person",
+          type: "ionicon",
+          color: theme.colors.onBgPrimary,
+        });
     }
   }, [filterType]);
 
   return (
     <SafeAreaView
-      style={{ flex: 1, backgroundColor: theme.colors.bgPrimary, alignItems: "center" }}
+      style={{
+        flex: 1,
+        backgroundColor: theme.colors.bgPrimary,
+        alignItems: "center",
+      }}
     >
       <List filterType={filterType} />
-
       <SpeedDial
         isOpen={speedDialOpen}
         color={theme.colors.accent}
@@ -78,7 +122,10 @@ const Faccende = () => {
           color={theme.colors.accent}
           icon={{ name: "add", color: theme.colors.onBgPrimary }}
           title="Add"
-          onPress={() => {setOpenNewChoreDialog(!openNewChoreDialog); setSpeedDialOpen(false)}}
+          onPress={() => {
+            navigation.navigate("Add Chore");
+            setSpeedDialOpen(false);
+          }}
         />
         <SpeedDial.Action
           color={theme.colors.accent}
@@ -87,14 +134,12 @@ const Faccende = () => {
           onPress={() => cycleFilters()}
         />
       </SpeedDial>
-
-      <DialogForm
-        isVisible={openNewChoreDialog}
-        onClose={() => setOpenNewChoreDialog(false)}
-      />
-
     </SafeAreaView>
   );
+};
+
+const AddChoreScreen = ({ navigation }: any) => {
+  return <DialogForm />;
 };
 
 export default Faccende;

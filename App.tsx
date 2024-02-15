@@ -4,6 +4,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import { AppProvider } from "./hooks/AppCasaProvider";
 import Authentication from "./components/Authentication";
+import 'react-native-gesture-handler';
 
 GoogleSignin.configure({
   scopes: [

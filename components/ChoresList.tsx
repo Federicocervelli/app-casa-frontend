@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import SwipeableFlatList from "rn-gesture-swipeable-flatlist";
 
-import { RefreshControl, TouchableOpacity } from "react-native-gesture-handler";
+import { RefreshControl, ScrollView, TouchableOpacity } from "react-native-gesture-handler";
 import { Avatar, Badge, Icon, Skeleton, useTheme } from "@rneui/themed";
 import { Chore, User } from "../types/types";
 import ChoreDetails from "./ChoreDetails";
@@ -23,57 +23,41 @@ interface ListProps {
   filterType: string;
 }
 
-function formatTimestamp(timestampInSeconds: number): string {
-  const currentDate = new Date();
-  const targetDate = new Date(timestampInSeconds * 1000); // Convert seconds to milliseconds
+function formatTimestamp(timestampInSeconds: number, isDone: boolean, doneAt: number | undefined | null): string {
+  const nowInSeconds = Math.floor(Date.now() / 1000);
+  let differenceInSeconds: number;
 
-  // Check if the timestamp is in the past
-  if (targetDate < currentDate) {
-    const timeDifference = currentDate.getTime() - targetDate.getTime();
-    const millisecondsPerHour = 60 * 60 * 1000;
-    const hoursDifference = Math.floor(timeDifference / millisecondsPerHour);
-
-    if (hoursDifference < 24) {
-      return `Late by ${hoursDifference} ${
-        hoursDifference === 1 ? "hour" : "hours"
-      }`;
-    } else {
-      const daysDifference = Math.floor(hoursDifference / 24);
-      return `Late by ${daysDifference} ${
-        daysDifference === 1 ? "day" : "days"
-      }`;
-    }
-  }
-
-  // Calculate time difference in milliseconds
-  const timeDifference = targetDate.getTime() - currentDate.getTime();
-  const millisecondsPerHour = 60 * 60 * 1000;
-  const hoursDifference = Math.floor(timeDifference / millisecondsPerHour);
-
-  if (hoursDifference < 1) {
-    return "in less than an hour";
-  } else if (hoursDifference === 1) {
-    return "in 1 hour";
-  } else if (
-    hoursDifference < 24 &&
-    targetDate.getDate() === currentDate.getDate()
-  ) {
-    return `today at ${targetDate.toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    })}`;
-  } else if (
-    hoursDifference < 48 &&
-    targetDate.getDate() === currentDate.getDate() + 1
-  ) {
-    return `tomorrow at ${targetDate.toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    })}`;
+  if (isDone && doneAt !== undefined && doneAt !== null) {
+    differenceInSeconds = doneAt - nowInSeconds;
   } else {
-    const daysDifference = Math.ceil(hoursDifference / 24);
-    return `in ${daysDifference} days`;
+    differenceInSeconds = timestampInSeconds - nowInSeconds;
   }
+
+  const absDifference = Math.abs(differenceInSeconds);
+  const sign = differenceInSeconds < 0 ? (isDone ? "done" : "late by") : "in";
+
+  if (absDifference < 60) {
+    return differenceInSeconds === 0
+      ? "due right now"
+      : `${sign} ${absDifference} second${absDifference === 1 ? "" : "s"} ${isDone ? "ago" : ""}`;
+  }
+
+  const differenceInMinutes = Math.floor(absDifference / 60);
+  if (differenceInMinutes < 60) {
+    return `${sign} ${differenceInMinutes} minute${
+      differenceInMinutes === 1 ? "" : "s"
+    } ${isDone ? "ago" : ""}`;
+  }
+
+  const differenceInHours = Math.floor(differenceInMinutes / 60);
+  if (differenceInHours < 24) {
+    return `${sign} ${differenceInHours} hour${
+      differenceInHours === 1 ? "" : "s"
+    } ${isDone ? "ago" : ""}`;
+  }
+
+  const differenceInDays = Math.floor(differenceInHours / 24);
+  return `${sign} ${differenceInDays} day${differenceInDays === 1 ? "" : "s"} ${isDone ? "ago" : ""}`;
 }
 
 export default function List({ filterType }: ListProps) {
@@ -85,8 +69,8 @@ export default function List({ filterType }: ListProps) {
   const [openChoreDialog, setOpenChoreDialog] = useState<Chore | null>(null);
   const nowTimestampInSeconds = Math.floor(Date.now() / 1000);
   const { theme } = useTheme();
-  const {state, dispatch} = useContext(AppContext);
-  const {session, houseUsers} = state;
+  const { state, dispatch } = useContext(AppContext);
+  const { session, houseUsers } = state;
 
   // When user is loaded, fetch data
   useEffect(() => {
@@ -95,7 +79,7 @@ export default function List({ filterType }: ListProps) {
 
   // When data changes, update visibleData according with filter
   useEffect(() => {
-    if(!session) return;
+    if (!session) return;
     switch (filterType) {
       case "My Chores":
         setVisibleChores(
@@ -193,7 +177,7 @@ export default function List({ filterType }: ListProps) {
     fetchChoresFromApi().then(() => setRefreshing(false));
   }, []);
 
-  const handleItemPress = (item: Chore ) => {
+  const handleItemPress = (item: Chore) => {
     //console.log("Item pressed:", item);
     setOpenChoreDialog(item);
   };
@@ -228,7 +212,9 @@ export default function List({ filterType }: ListProps) {
         onPress={() => handleItemPress(item)}
         style={({ pressed }) => [
           {
-            backgroundColor: pressed ? theme.colors.bgSecondary : theme.colors.bgPrimary,
+            backgroundColor: pressed
+              ? theme.colors.bgSecondary
+              : theme.colors.bgPrimary,
           },
           styles.item,
         ]}
@@ -261,13 +247,26 @@ export default function List({ filterType }: ListProps) {
               color={theme.colors.onBgPrimary}
             />
           </View>
-  
+
           {/* Middle content */}
-          <View style={{ flex: 1, flexDirection: "column", alignItems: "flex-start", gap: 5 }}>
-            <Text style={{ color: theme.colors.onBgPrimary, fontWeight: "bold" }} ellipsizeMode="tail" numberOfLines={1}>
+          <View
+            style={{
+              flex: 1,
+              flexDirection: "column",
+              alignItems: "flex-start",
+              gap: 5,
+            }}
+          >
+            <Text
+              style={{ color: theme.colors.onBgPrimary, fontWeight: "bold" }}
+              ellipsizeMode="tail"
+              numberOfLines={1}
+            >
               {item.name}
             </Text>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: -10 }}>
+            <View
+              style={{ flexDirection: "row", alignItems: "center", gap: -10 }}
+            >
               {item.users.map((user, index) => (
                 <Avatar
                   rounded={true}
@@ -278,51 +277,127 @@ export default function List({ filterType }: ListProps) {
               ))}
             </View>
           </View>
-  
+
           {/* Date */}
-          <View style={{ flexDirection: "column", alignItems: "flex-end", gap: 5, minWidth: 80 }}>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 5,
+              minWidth: 80,
+            }}
+          >
             <Text style={{ color: theme.colors.onBgSecondary, marginTop: -2 }}>
-              {formatTimestamp(item.end)}
+              {formatTimestamp(item.end, item.is_done, item.done_at)}
             </Text>
+            <Icon
+              name="chevron-forward-outline"
+              type="ionicon"
+              size={20}
+              color={theme.colors.onBgSecondary}
+            />
           </View>
         </View>
       </Pressable>
     </>
   );
 
+  const noItemsLeft = () => (
+    <ScrollView
+    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
+      
+      <Pressable
+        onPress={() => (null)}
+        style={({ pressed }) => [
+          {
+            backgroundColor: pressed
+              ? theme.colors.bgSecondary
+              : theme.colors.bgPrimary,
+          },
+          styles.item,
+        ]}
+      >
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            maxWidth: "100%",
+          }}
+        >
+          {/* Icon */}
+          <View
+            style={{
+              width: 50,
+              height: 50,
+              backgroundColor: theme.colors.accent,
+              borderRadius: 8,
+              flexDirection: "row",
+              justifyContent: "center",
+              alignItems: "center",
+              marginRight: 20, // Set a fixed margin to create space between icon and text
+            }}
+          >
+            <Icon
+              name="checkmark-done-outline"
+              type="ionicon"
+              size={30}
+              color={theme.colors.onBgPrimary}
+            />
+          </View>
+
+          {/* Middle content */}
+          <View
+            style={{
+              flex: 1,
+              flexDirection: "column",
+              alignItems: "flex-start",
+              gap: 5,
+            }}
+          >
+            <Text
+              style={{ color: theme.colors.onBgPrimary, fontWeight: "bold" }}
+              ellipsizeMode="tail"
+              numberOfLines={1}
+            >
+              Faccende finite!
+            </Text>
+            <Text
+              style={{ color: theme.colors.onBgPrimary }}
+              ellipsizeMode="tail"
+              numberOfLines={2}
+            >
+              Prova a scorrere verso il basso per aggiornare la lista.
+            </Text>
+            
+          </View>
+        </View>
+      </Pressable>
+    </ScrollView>
+  );
+
   if (loading) {
     return <LoadingSkeleton />;
   }
 
-  const noItems: Chore = {
-    id: "default-item-id",
-    users: [],
-    house: "",
-    start: 0,
-    end: 0,
-    done_at: null,
-    name: "Faccende Finite!",
-    desc: "Prova a scorrere verso il basso per vedere se ci sono aggiornamenti.",
-    is_done: false,
-    is_periodic: false,
-    cyclicality: "Giornaliera",
-    day_of_week: null,
-    day_of_month: null,
-    created_by: "",
-    created_at: 0,
-  };
-
   return (
     <>
-      <View style={{ flex: 1, backgroundColor: theme.colors.bgPrimary, width: "100%" }}>
-        <SwipeableFlatList
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: theme.colors.bgPrimary,
+          width: "100%",
+        }}
+      >
+        {visibleChores.length > 0 ? (
+          <SwipeableFlatList
           swipeableProps={{
             friction: 3,
             leftThreshold: 100,
             overshootLeft: false,
             overshootRight: false,
           }}
-          data={visibleChores.length > 0 ? visibleChores : [noItems]}
+          data={visibleChores}
           keyExtractor={(item) => item.id}
           enableOpenMultipleRows={false}
           renderItem={renderItem}
@@ -332,8 +407,15 @@ export default function List({ filterType }: ListProps) {
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
-          ItemSeparatorComponent={() => <View style={{ height: 1, backgroundColor: theme.colors.bgSecondary }} />}
+          ItemSeparatorComponent={() => (
+            <View
+              style={{ height: 1, backgroundColor: theme.colors.bgSecondary }}
+            />
+          )}
         />
+        ):(
+          noItemsLeft()
+        )}
       </View>
       <ChoreDetails
         houseUsers={houseUsers}

@@ -139,7 +139,7 @@ const ListScreen = ({ navigation }: any) => {
 };
 
 const AddChoreScreen = ({ navigation }: any) => {
-  return <DialogForm />;
+  return <DialogForm navigation={navigation} />;
 };
 
 export default Faccende;

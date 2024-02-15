@@ -19,7 +19,7 @@ import { Session } from "@supabase/supabase-js";
 import { AppContext } from "../hooks/AppCasaProvider";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const DialogFormScreen = () => {
+const DialogFormScreen = ({navigation} : any) => {
   const { theme } = useTheme();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -106,8 +106,8 @@ const DialogFormScreen = () => {
     setTime(new Date());
     setSelectedUsers([]);
     // Close the dialog
-    onClose();
-    // TODO: Call refresh
+    navigation.goBack();
+    
   }
   // Add any other logic you need here, for example, handling form submission
   return (

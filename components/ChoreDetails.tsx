@@ -1,16 +1,16 @@
-import { Dialog, Text } from "@rneui/themed";
+import { Dialog, Text, useTheme } from "@rneui/themed";
 import React, { useEffect, useState } from "react";
 import { Chore, User } from "../types/types";
 import { View } from "react-native";
 
 interface ChoreDetailsProps {
-  item: Chore;
+  item: Chore | null;
   onClose: () => void;
   houseUsers: User[];
 }
 
-function formatTimestamp(timestamp: number | null): string {
-  if (timestamp === 0 || timestamp === null) {return "N/A"}
+function formatTimestamp(timestamp: number | undefined | null): string {
+  if (timestamp === 0 || timestamp === null || timestamp === undefined) {return "N/A"}
   const date = new Date(timestamp * 1000); // Convert seconds to milliseconds
   if (isNaN(date.getTime())) {
     return "N/A"; // Handle invalid date
@@ -28,8 +28,8 @@ function formatTimestamp(timestamp: number | null): string {
   return formattedDate;
 }
 
-function getUserName(created_by: string, houseUsers: User[]): string {
-  if (created_by === "") {
+function getUserName(created_by: string | undefined, houseUsers: User[]): string {
+  if (created_by === "" || created_by === undefined) {
     return "N/A";
   }
   if ( !houseUsers ){
@@ -45,6 +45,7 @@ function getUserName(created_by: string, houseUsers: User[]): string {
 
 function ChoreDetails({ item, onClose, houseUsers }: ChoreDetailsProps) {
   const [isVisible, setIsVisible] = useState(false);
+  const { theme } = useTheme();
 
   useEffect(() => {
     if (item !== null) {
@@ -58,12 +59,12 @@ function ChoreDetails({ item, onClose, houseUsers }: ChoreDetailsProps) {
     <Dialog
       isVisible={isVisible}
       onBackdropPress={onClose}
-      overlayStyle={{ backgroundColor: "#333" }}
+      overlayStyle={{ backgroundColor: theme.colors.bgPrimary }}
     >
-      <Dialog.Title title={item?.name} titleStyle={{ color: "white" }} />
-      <Text style={{ color: "white" }}>{item?.desc}</Text>
+      <Dialog.Title title={item?.name} titleStyle={{ color: theme.colors.onBgPrimary }} />
+      <Text style={{ color: theme.colors.onBgSecondary }}>{item?.desc}</Text>
       <View style={{marginTop: 10}}/>
-      <Text style={{ color: "white" }}>created at {formatTimestamp(item?.created_at)} by {getUserName(item?.created_by, houseUsers)}</Text>
+      <Text style={{ color: theme.colors.onBgSecondary }}>created at {formatTimestamp(item?.created_at)} by {getUserName(item?.created_by, houseUsers)}</Text>
     </Dialog>
   );
 }

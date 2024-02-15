@@ -1,35 +1,32 @@
-import React, { useEffect, useState } from "react";
-import { Tab, Text, TabView, useTheme } from "@rneui/themed";
-import { SafeAreaView } from "react-native-safe-area-context";
+import React, { useContext, useEffect, useState } from "react";
+import { Text, useTheme } from "@rneui/themed";
 import Impostazioni from "./tabs/Impostazioni";
 import History from "./tabs/History";
 import Faccende from "./tabs/Faccende";
 import { ActivityIndicator, View } from "react-native";
-import { supabase } from "../utils/supabase";
+import { AppContext } from "../hooks/AppCasaProvider";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { NavigationContainer } from "@react-navigation/native";
+import Icon from "react-native-vector-icons/Ionicons";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import { House, User } from "../types/types";
-import { Session } from "@supabase/supabase-js";
+const Tab = createBottomTabNavigator();
 
-function home({ session }: { session: Session }) {
-  const [index, setIndex] = React.useState(0);
+function home() {
+  const { state, dispatch } = useContext(AppContext);
+  const { session, house, houseLoaded } = state;
   const { theme } = useTheme();
-  const [loaded, setLoaded] = React.useState(false);
-  const [house, setHouse] = useState<House|null>(null);
-  const [houseUsers, setHouseUsers] = useState<User[]>([]);
 
   React.useEffect(() => {
     Promise.all([fetchHouseFromApi(), fetchHouseUsersFromApi()])
-    .then(() => setLoaded(true))
-    .catch((error) => console.error(error));
+      .then(() => dispatch({ type: "setHouseLoaded", payload: true }))
+      .catch((error) => console.error(error));
   }, []);
 
-  const handleHouseChange = async () => {
-    setLoaded(false);
-    await fetchHouseUsersFromApi();
-    setLoaded(true);
-  }
-
   const fetchHouseUsersFromApi = async () => {
+    if (!session) {
+      return console.error("You need to be logged in to fetch house users.");
+    }
     try {
       const response = await fetch(
         `${process.env.EXPO_PUBLIC_API_ENDPOINT}/api/v2/house/users`,
@@ -41,20 +38,24 @@ function home({ session }: { session: Session }) {
           },
         }
       );
+      const apiResponse = await response.json();
 
       if (!response.ok) {
-        console.error("Error fetching users:", await response.json());
+        console.error("Error fetching users:", apiResponse);
+        return;
       }
 
-      const apiResponse = await response.json();
-      console.log("Users: ", apiResponse );
-      setHouseUsers(apiResponse)
+      console.log("Users: ", apiResponse);
+      dispatch({ type: "setHouseUsers", payload: apiResponse });
     } catch (error) {
       console.error("Error fetching users:", error);
     }
-  }
+  };
 
   const fetchHouseFromApi = async () => {
+    if (!session) {
+      return console.error("You need to be logged in to fetch a house.");
+    }
     try {
       const response = await fetch(
         `${process.env.EXPO_PUBLIC_API_ENDPOINT}/api/v2/house`,
@@ -67,118 +68,154 @@ function home({ session }: { session: Session }) {
         }
       );
 
+      const apiResponse = await response.json();
+
       if (!response.ok) {
-        console.error("Error fetching data:", await response.json());
+        console.error("Error fetching data:", apiResponse);
+        return;
       }
 
-      const apiResponse = await response.json();
       console.log("House: ", apiResponse);
-      setHouse(apiResponse);
+      dispatch({ type: "setHouse", payload: apiResponse });
     } catch (error) {
       console.error("Error fetching data:", error);
     }
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: "black" }}>
-      <TabView
-        value={index}
-        onChange={setIndex}
-        animationType="spring"
-        disableSwipe={true}
-      >
-        <TabView.Item style={{ width: "100%" }}>
-          {loaded ? (
-            house ? (
-              <Faccende
-                house={house}
-                houseUsers={houseUsers}
-                session={session}
-              />
-            ) : (
-              <SafeAreaView
-                style={{
-                  flex: 1,
-                  backgroundColor: "black",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <Text
-                  style={{ color: "white", textAlign: "center", fontSize: 30 }}
-                >
-                  Non hai nessuna casa. Per favore entra o crea una casa nelle
-                  impostazioni.
-                </Text>
-              </SafeAreaView>
-            )
-          ) : (
-            <SafeAreaView
-                style={{
-                  flex: 1,
-                  backgroundColor: "black",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <ActivityIndicator size="large" color={theme.colors.primary} />
-              </SafeAreaView>
-          )}
-        </TabView.Item>
-        <TabView.Item style={{ width: "100%" }}>
-          <History />
-        </TabView.Item>
-        <TabView.Item style={{ width: "100%" }}>
-          <Impostazioni
-            house={house}
-            setHouse={setHouse}
-            session={session}
-            handleHouseChange={handleHouseChange}
-          />
-        </TabView.Item>
-      </TabView>
+    <NavigationContainer>
+      <Tab.Navigator
+        screenOptions={({ route }) => ({
+          tabBarIcon: ({ focused, color, size }) => {
+            let iconName;
 
-      <Tab
-        value={index}
-        onChange={(e) => setIndex(e)}
-        containerStyle={{
-          backgroundColor: "black",
-          borderTopColor: theme.colors.grey0,
-          borderTopWidth: 1,
-        }}
-        buttonStyle={{
-          height: 60,
-        }}
-        disableIndicator
-        variant="primary"
+            if (route.name === "Chores") {
+              iconName = focused ? "home" : "home-outline";
+            } else if (route.name === "History") {
+              iconName = focused ? "time" : "time-outline";
+            } else if (route.name === "Settings") {
+              iconName = focused ? "settings" : "settings-outline";
+            }
+
+            // You can return any component that you like here!
+            return <Icon name={iconName as string} size={size} color={color} />;
+          },
+          tabBarActiveTintColor: theme.colors.onBgSecondary,
+          tabBarInactiveTintColor: theme.colors.disabled,
+          headerShown: false,
+          tabBarStyle: {
+            backgroundColor: theme.colors.bgPrimary,
+            borderTopColor: theme.colors.disabled,
+            borderTopWidth: 0,
+            elevation: 15,
+            height: 70,
+          },
+          tabBarItemStyle: {
+            paddingVertical: 10,
+          }
+          
+          
+        })}
+        initialRouteName="Chores"
       >
-        <Tab.Item
-          titleStyle={{ fontSize: 12 }}
-          icon={{
-            name: "home",
-            type: "ionicon",
-            color: index === 0 ? "white" : theme.colors.grey3,
-          }}
-        />
-        <Tab.Item
-          titleStyle={{ fontSize: 12 }}
-          icon={{
-            name: "time",
-            type: "ionicon",
-            color: index === 1 ? "white" : theme.colors.grey3,
-          }}
-        />
-        <Tab.Item
-          titleStyle={{ fontSize: 12 }}
-          icon={{
-            name: "settings",
-            type: "ionicon",
-            color: index === 2 ? "white" : theme.colors.grey3,
-          }}
-        />
-      </Tab>
-    </View>
+        <Tab.Screen name="Chores" component={ChoresScreen} />
+        <Tab.Screen name="History" component={HistoryScreen} />
+        <Tab.Screen name="Settings" component={ImpostazioniScreen} />
+      </Tab.Navigator>
+    </NavigationContainer>
   );
 }
+
+const ChoresScreen = () => {
+  const { theme } = useTheme();
+  const { state, dispatch } = useContext(AppContext);
+  const { session, house, houseLoaded } = state;
+  return (
+    <>
+      {houseLoaded ? (
+        house ? (
+          <Faccende />
+        ) : (
+          <SafeAreaView
+            style={{
+              flex: 1,
+              backgroundColor: theme.colors.bgPrimary,
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Text
+              style={{
+                color: theme.colors.onBgPrimary,
+                textAlign: "center",
+                fontSize: 30,
+              }}
+            >
+              Non hai nessuna casa. Per favore entra o crea una casa nelle
+              impostazioni.
+            </Text>
+          </SafeAreaView>
+        )
+      ) : (
+        <SafeAreaView
+          style={{
+            flex: 1,
+            backgroundColor: "black",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+        </SafeAreaView>
+      )}
+    </>
+  );
+};
+
+const HistoryScreen = () => {
+  return <History />;
+};
+
+const ImpostazioniScreen = () => {
+  const { state, dispatch } = useContext(AppContext);
+  const { session } = state;
+
+  const fetchHouseUsersFromApi = async () => {
+    if (!session) {
+      return console.error("You need to be logged in to fetch house users.");
+    }
+    try {
+      const response = await fetch(
+        `${process.env.EXPO_PUBLIC_API_ENDPOINT}/api/v2/house/users`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        }
+      );
+      const apiResponse = await response.json();
+
+      if (!response.ok) {
+        console.error("Error fetching users:", apiResponse);
+        return;
+      }
+
+      console.log("Users: ", apiResponse);
+      dispatch({ type: "setHouseUsers", payload: apiResponse });
+    } catch (error) {
+      console.error("Error fetching users:", error);
+    }
+  };
+
+  const handleHouseChange = async () => {
+    dispatch({ type: "setHouseLoaded", payload: false });
+    await fetchHouseUsersFromApi();
+    dispatch({ type: "setHouseLoaded", payload: true });
+  };
+
+  return <Impostazioni handleHouseChange={handleHouseChange} />;
+};
 
 export default home;

@@ -1,5 +1,5 @@
 // DialogForm.tsx
-import React, { useEffect, useRef, useState } from "react";
+import React, { useContext, useEffect, useRef, useState } from "react";
 import {
   StyleSheet,
   ScrollView,
@@ -16,15 +16,14 @@ import { MultiSelect } from "react-native-element-dropdown";
 import AntDesign from "@expo/vector-icons/AntDesign";
 import { User } from "../types/types";
 import { Session } from "@supabase/supabase-js";
+import { AppContext } from "../hooks/AppCasaProvider";
 
 interface DialogFormProps {
   isVisible: boolean;
   onClose: () => void;
-  houseUsers: User[];
-  session: Session;
 }
 
-const DialogForm: React.FC<DialogFormProps> = ({ isVisible, onClose, houseUsers, session }) => {
+const DialogForm: React.FC<DialogFormProps> = ({ isVisible, onClose }) => {
 
   const { theme } = useTheme();
 
@@ -36,7 +35,10 @@ const DialogForm: React.FC<DialogFormProps> = ({ isVisible, onClose, houseUsers,
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
 
-  const onChange = (event, selectedDate) => {
+  const { state, dispatch } = useContext(AppContext);
+  const { session, houseUsers } = state;
+
+  const onChange = (selectedDate: Date) => {
     const currentDate = selectedDate;
     setShowDatePicker(false);
     if (mode === "date") {
@@ -46,7 +48,7 @@ const DialogForm: React.FC<DialogFormProps> = ({ isVisible, onClose, houseUsers,
     }
   };
 
-  const showMode = (currentMode) => {
+  const showMode = (currentMode: "date" | "time") => {
     setShowDatePicker(true);
     setMode(currentMode);
   };
@@ -68,6 +70,10 @@ const DialogForm: React.FC<DialogFormProps> = ({ isVisible, onClose, houseUsers,
   };
 
   async function handleSubmit() {
+    if (!session) {
+      console.error("You need to be logged in to create a house");
+      return;
+    }
     //validate fields
     if (!name || !description || !date || !time || !selectedUsers) {
       console.error("Missing fields");
@@ -219,9 +225,9 @@ const DialogForm: React.FC<DialogFormProps> = ({ isVisible, onClose, houseUsers,
             <DateTimePicker
               testID="datePicker"
               value={date}
-              mode={mode}
+              mode={mode === "date" ? "date" : "time"}
               display="default"
-              onChange={onChange}
+              onChange={onChange as any}
             />
           )}
 

@@ -5,8 +5,10 @@ import {
 } from "@react-native-google-signin/google-signin";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { supabase } from "../utils/supabase";
+import { useTheme, Text } from "@rneui/themed";
 
 export default function () {
+  const {theme} = useTheme();
   const signIn = async () => {
     try {
       await GoogleSignin.hasPlayServices();
@@ -40,10 +42,12 @@ export default function () {
   });
 
   return (
-    <SafeAreaView>
+    <SafeAreaView style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: theme.colors.bgPrimary }}>
+      <Text style={{ color: theme.colors.onBgPrimary, fontWeight: "bold", fontSize: 20 }}>Please sign in to use this app.</Text>
+      <Text style={{ color: theme.colors.onBgPrimary, fontSize: 16, marginBottom: 20 }}>For now only google sign in is supported.</Text>
       <GoogleSigninButton
         size={GoogleSigninButton.Size.Wide}
-        color={GoogleSigninButton.Color.Dark}
+        color={GoogleSigninButton.Color.Light}
         onPress={signIn}
       />
     </SafeAreaView>

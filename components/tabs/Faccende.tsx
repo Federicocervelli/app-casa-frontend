@@ -11,7 +11,7 @@ import {
 import { View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import List from "../ChoresList";
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { ScrollView } from "react-native-gesture-handler";
 import InputField from "../InputField";
 import DialogForm from "../DialogForm";
@@ -19,20 +19,19 @@ import ChoreDetails from "../ChoreDetails";
 import { Chore, House, User } from "../../types/types";
 import { Session } from "@supabase/supabase-js";
 import { IconNode } from "@rneui/base";
+import { AppContext } from "../../hooks/AppCasaProvider";
 
-interface FaccendeProps {
-  house: House;
-  houseUsers: User[];
-  session: Session;
-}
 
-const Faccende: React.FC<FaccendeProps> = ({ houseUsers, house, session }) => {
+
+const Faccende = () => {
   const filterTypes = ["My Chores", "Created Chores", "All Chores"];
   const { theme } = useTheme();
   const [openNewChoreDialog, setOpenNewChoreDialog] = useState(false);
   const [speedDialOpen, setSpeedDialOpen] = useState(false);
   const [filterType, setFilterType] = useState("My Chores");
   const [icon, setIcon] = useState<IconNode>({ name: "person", type: "ionicon", color: "#fff" });
+  const { state, dispatch } = useContext(AppContext);
+  const { session, houseUsers } = state;
 
   const cycleFilters = () => {
     // Find the index of the current filter type in the array
@@ -47,42 +46,42 @@ const Faccende: React.FC<FaccendeProps> = ({ houseUsers, house, session }) => {
     // Update the icon dynamically based on the current filterType
     switch (filterType) {
       case "My Chores":
-        setIcon({ name: "person", type: "ionicon", color: "#fff" });
+        setIcon({ name: "person", type: "ionicon", color: theme.colors.onBgPrimary });
         break;
       case "Created Chores":
-        setIcon({ name: "person-add", type: "ionicon", color: "#fff" });
+        setIcon({ name: "person-add", type: "ionicon", color: theme.colors.onBgPrimary });
         break;
       case "All Chores":
-        setIcon({ name: "list", type: "ionicon", color: "#fff" });
+        setIcon({ name: "list", type: "ionicon", color: theme.colors.onBgPrimary });
         break;
       default:
-        setIcon({ name: "person", type: "ionicon", color: "#fff" });
+        setIcon({ name: "person", type: "ionicon", color: theme.colors.onBgPrimary });
     }
   }, [filterType]);
 
   return (
     <SafeAreaView
-      style={{ flex: 1, backgroundColor: "black", alignItems: "center" }}
+      style={{ flex: 1, backgroundColor: theme.colors.bgPrimary, alignItems: "center" }}
     >
-      <List houseUsers={houseUsers} session={session} filterType={filterType} />
+      <List filterType={filterType} />
 
       <SpeedDial
         isOpen={speedDialOpen}
-        color={theme.colors.primary}
-        icon={{ name: "edit", color: "#fff" }}
-        openIcon={{ name: "close", color: "#fff" }}
+        color={theme.colors.accent}
+        icon={{ name: "edit", color: theme.colors.onBgPrimary }}
+        openIcon={{ name: "close", color: theme.colors.onBgPrimary }}
         onOpen={() => setSpeedDialOpen(!speedDialOpen)}
         onClose={() => setSpeedDialOpen(!speedDialOpen)}
         overlayColor="rgba(0, 0, 0, 0.5)"
       >
         <SpeedDial.Action
-          color={theme.colors.primary}
-          icon={{ name: "add", color: "#fff" }}
+          color={theme.colors.accent}
+          icon={{ name: "add", color: theme.colors.onBgPrimary }}
           title="Add"
           onPress={() => {setOpenNewChoreDialog(!openNewChoreDialog); setSpeedDialOpen(false)}}
         />
         <SpeedDial.Action
-          color={theme.colors.primary}
+          color={theme.colors.accent}
           icon={icon}
           title={`Filter: ${filterType}`}
           onPress={() => cycleFilters()}
@@ -92,8 +91,6 @@ const Faccende: React.FC<FaccendeProps> = ({ houseUsers, house, session }) => {
       <DialogForm
         isVisible={openNewChoreDialog}
         onClose={() => setOpenNewChoreDialog(false)}
-        houseUsers={houseUsers}
-        session={session}
       />
 
     </SafeAreaView>

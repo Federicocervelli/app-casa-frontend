@@ -1,3 +1,4 @@
+import { useTheme } from '@rneui/themed';
 import React, { useState, ChangeEvent } from 'react';
 import { OutlinedTextField } from 'rn-material-ui-textfield';
 
@@ -7,6 +8,7 @@ interface InputFieldProps {
 }
 
 const InputField: React.FC<InputFieldProps> = ({ label, onInputChange }) => {
+  const {theme} = useTheme();
   const [value, setValue] = useState('');
 
   const handleTextChange = (text: string) => {
@@ -23,8 +25,10 @@ const InputField: React.FC<InputFieldProps> = ({ label, onInputChange }) => {
       onChangeText={handleTextChange}
       contentInset={{ left: 18 }}
       labelOffset={{ x1: 8 }}
-      textColor="#fff"
-      baseColor="#aaa"
+      tintColor={theme.colors.accent}
+      cursorColor={theme.colors.accent}
+      textColor={theme.colors.onBgPrimary}
+      baseColor={theme.colors.onBgSecondary}
     />
   );
 };

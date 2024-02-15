@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useContext, useEffect, useState } from "react";
 import {
   StyleSheet,
   Text,
@@ -10,17 +10,16 @@ import {
 import SwipeableFlatList from "rn-gesture-swipeable-flatlist";
 
 import { RefreshControl, TouchableOpacity } from "react-native-gesture-handler";
-import { Avatar, Badge, Icon, Skeleton } from "@rneui/themed";
+import { Avatar, Badge, Icon, Skeleton, useTheme } from "@rneui/themed";
 import { Chore, User } from "../types/types";
 import ChoreDetails from "./ChoreDetails";
 import { Session } from "@supabase/supabase-js";
+import { AppContext } from "../hooks/AppCasaProvider";
 
 //  To toggle LTR/RTL change to `true`
 I18nManager.allowRTL(false);
 
 interface ListProps {
-  houseUsers: User[];
-  session: Session;
   filterType: string;
 }
 
@@ -77,7 +76,7 @@ function formatTimestamp(timestampInSeconds: number): string {
   }
 }
 
-export default function List({ houseUsers, session, filterType }: ListProps) {
+export default function List({ filterType }: ListProps) {
   const [chores, setChores] = useState<Chore[]>([]);
   const [visibleChores, setVisibleChores] = useState<Chore[]>([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -85,6 +84,9 @@ export default function List({ houseUsers, session, filterType }: ListProps) {
   const [loadingChoreDone, setLoadingChoreDone] = useState(false);
   const [openChoreDialog, setOpenChoreDialog] = useState<Chore | null>(null);
   const nowTimestampInSeconds = Math.floor(Date.now() / 1000);
+  const { theme } = useTheme();
+  const {state, dispatch} = useContext(AppContext);
+  const {session, houseUsers} = state;
 
   // When user is loaded, fetch data
   useEffect(() => {
@@ -93,6 +95,7 @@ export default function List({ houseUsers, session, filterType }: ListProps) {
 
   // When data changes, update visibleData according with filter
   useEffect(() => {
+    if(!session) return;
     switch (filterType) {
       case "My Chores":
         setVisibleChores(
@@ -118,7 +121,7 @@ export default function List({ houseUsers, session, filterType }: ListProps) {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
+            Authorization: `Bearer ${session?.access_token}`,
           },
         }
       );
@@ -156,7 +159,7 @@ export default function List({ houseUsers, session, filterType }: ListProps) {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
+          Authorization: `Bearer ${session?.access_token}`,
         },
       }
     );
@@ -190,7 +193,7 @@ export default function List({ houseUsers, session, filterType }: ListProps) {
     fetchChoresFromApi().then(() => setRefreshing(false));
   }, []);
 
-  const handleItemPress = (item: Chore) => {
+  const handleItemPress = (item: Chore ) => {
     //console.log("Item pressed:", item);
     setOpenChoreDialog(item);
   };
@@ -225,7 +228,7 @@ export default function List({ houseUsers, session, filterType }: ListProps) {
         onPress={() => handleItemPress(item)}
         style={({ pressed }) => [
           {
-            backgroundColor: pressed ? "#222" : "#000",
+            backgroundColor: pressed ? theme.colors.bgSecondary : theme.colors.bgPrimary,
           },
           styles.item,
         ]}
@@ -235,87 +238,52 @@ export default function List({ houseUsers, session, filterType }: ListProps) {
             flexDirection: "row",
             alignItems: "center",
             justifyContent: "space-between",
+            maxWidth: "100%",
           }}
         >
-          <Text style={{ color: "white", fontWeight: "bold" }}>
-            {item.name}
-          </Text>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-            <View>
-              <Icon
-                name="time-outline"
-                type="ionicon"
-                color="white"
-                size={20}
-              />
+          {/* Icon */}
+          <View
+            style={{
+              width: 50,
+              height: 50,
+              backgroundColor: theme.colors.bgSecondary,
+              borderRadius: 8,
+              flexDirection: "row",
+              justifyContent: "center",
+              alignItems: "center",
+              marginRight: 20, // Set a fixed margin to create space between icon and text
+            }}
+          >
+            <Icon
+              name="trash-can-outline"
+              type="material-community"
+              size={30}
+              color={theme.colors.onBgPrimary}
+            />
+          </View>
+  
+          {/* Middle content */}
+          <View style={{ flex: 1, flexDirection: "column", alignItems: "flex-start", gap: 5 }}>
+            <Text style={{ color: theme.colors.onBgPrimary, fontWeight: "bold" }} ellipsizeMode="tail" numberOfLines={1}>
+              {item.name}
+            </Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: -10 }}>
+              {item.users.map((user, index) => (
+                <Avatar
+                  rounded={true}
+                  key={index}
+                  size={25}
+                  source={{ uri: getUserImage(user, houseUsers) }}
+                />
+              ))}
             </View>
-            <Text style={{ color: "white", marginTop: -2 }}>
+          </View>
+  
+          {/* Date */}
+          <View style={{ flexDirection: "column", alignItems: "flex-end", gap: 5, minWidth: 80 }}>
+            <Text style={{ color: theme.colors.onBgSecondary, marginTop: -2 }}>
               {formatTimestamp(item.end)}
             </Text>
-          </View>
-        </View>
-        <View
-          style={{
-            marginTop: 10,
-            alignSelf: "flex-start",
-            flexDirection: "row",
-            gap: 5,
-            justifyContent: "space-between",
-            width: "100%",
-            alignItems: "center",
-          }}
-        >
-          {item.is_done ? (
-            <Text
-              style={{
-                backgroundColor: "green",
-                paddingVertical: 3,
-                paddingHorizontal: 8,
-                borderRadius: 99,
-                color: "white",
-                textAlign: "center",
-              }}
-            >
-              Completed
-            </Text>
-          ) : item.end < nowTimestampInSeconds ? (
-            <Text
-              style={{
-                backgroundColor: "red", // or another color you prefer for expired
-                paddingVertical: 3,
-                paddingHorizontal: 8,
-                borderRadius: 99,
-                color: "white",
-                textAlign: "center",
-              }}
-            >
-              Expired
-            </Text>
-          ) : (
-            <Text
-              style={{
-                backgroundColor: "gray",
-                paddingVertical: 3,
-                paddingHorizontal: 8,
-                borderRadius: 99,
-                color: "white",
-                textAlign: "center",
-              }}
-            >
-              Pending
-            </Text>
-          )}
-          <View
-            style={{ flexDirection: "row", alignItems: "center", gap: -10 }}
-          >
-            {item.users.map((user, index) => (
-              <Avatar
-                rounded={true}
-                key={index}
-                size={25}
-                source={{ uri: getUserImage(user, houseUsers) }}
-              />
-            ))}
           </View>
         </View>
       </Pressable>
@@ -346,7 +314,7 @@ export default function List({ houseUsers, session, filterType }: ListProps) {
 
   return (
     <>
-      <View style={styles.container}>
+      <View style={{ flex: 1, backgroundColor: theme.colors.bgPrimary, width: "100%" }}>
         <SwipeableFlatList
           swipeableProps={{
             friction: 3,
@@ -364,7 +332,7 @@ export default function List({ houseUsers, session, filterType }: ListProps) {
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
-          ItemSeparatorComponent={() => <View style={styles.separator} />}
+          ItemSeparatorComponent={() => <View style={{ height: 1, backgroundColor: theme.colors.bgSecondary }} />}
         />
       </View>
       <ChoreDetails
@@ -429,21 +397,12 @@ const LoadingSkeleton: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    width: "100%",
-    backgroundColor: "#000",
-  },
   loadingContainer: {
     width: "100%",
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "#333",
-  },
-  separator: {
-    height: 1,
-    backgroundColor: "#333", // Change the color to match your design
   },
   item: {
     width: "100%",

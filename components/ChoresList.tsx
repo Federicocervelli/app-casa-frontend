@@ -306,16 +306,15 @@ export default function List({ filterType }: ListProps) {
     <ScrollView
     refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
       
-      <Pressable
-        onPress={() => (null)}
-        style={({ pressed }) => [
-          {
-            backgroundColor: pressed
-              ? theme.colors.bgSecondary
-              : theme.colors.bgPrimary,
-          },
-          styles.item,
-        ]}
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: theme.colors.bgPrimary,
+          padding: 20,
+        }}
+        
       >
         <View
           style={{
@@ -372,7 +371,7 @@ export default function List({ filterType }: ListProps) {
             
           </View>
         </View>
-      </Pressable>
+      </View>
     </ScrollView>
   );
 

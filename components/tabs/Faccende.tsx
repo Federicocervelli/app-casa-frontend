@@ -7,15 +7,15 @@ import {
   Input,
   Icon,
   SpeedDial,
+  Text,
 } from "@rneui/themed";
 import { View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import List from "../ChoresList";
 import { useContext, useEffect, useState } from "react";
-import { ScrollView } from "react-native-gesture-handler";
+import { ScrollView, TouchableOpacity } from "react-native-gesture-handler";
 import InputField from "../InputField";
 import DialogForm from "../DialogForm";
-import ChoreDetails from "../ChoreDetails";
 import { Chore, House, User } from "../../types/types";
 import { Session } from "@supabase/supabase-js";
 import { IconNode } from "@rneui/base";
@@ -29,7 +29,9 @@ const Faccende = () => {
   return (
     <Stack.Navigator
       initialRouteName="List"
-      screenOptions={{ headerStyle: { backgroundColor: theme.colors.bgPrimary } }}
+      screenOptions={{
+        headerStyle: { backgroundColor: theme.colors.bgPrimary },
+      }}
     >
       <Stack.Screen
         name="List"
@@ -40,6 +42,26 @@ const Faccende = () => {
         name="Add Chore"
         component={AddChoreScreen}
         options={{ headerShown: true }}
+      />
+      <Stack.Screen
+        name="Chore Details"
+        component={ChoreDetailsScreen}
+        options={({ navigation }) => ({
+          headerShown: true,
+          headerRight: () => (
+            <TouchableOpacity
+              
+              
+              onPress={() => {
+                navigation.navigate("Edit Chore");
+              }}
+              style={{ marginRight: 15 }}
+            >
+              <Icon name="hammer" type="ionicon" color={theme.colors.accent} />
+              
+            </TouchableOpacity>
+          ),
+        })}
       />
     </Stack.Navigator>
   );
@@ -108,7 +130,7 @@ const ListScreen = ({ navigation }: any) => {
         alignItems: "center",
       }}
     >
-      <List filterType={filterType} />
+      <List filterType={filterType} navigation={navigation} />
       <SpeedDial
         isOpen={speedDialOpen}
         color={theme.colors.accent}
@@ -140,6 +162,72 @@ const ListScreen = ({ navigation }: any) => {
 
 const AddChoreScreen = ({ navigation }: any) => {
   return <DialogForm navigation={navigation} />;
+};
+
+const ChoreDetailsScreen = ({ navigation }: any) => {
+  const { theme } = useTheme();
+  const { state, dispatch } = useContext(AppContext);
+  const { houseUsers, selectedChore } = state;
+
+  function formatTimestamp(timestamp: number | undefined | null): string {
+    if (timestamp === 0 || timestamp === null || timestamp === undefined) {
+      return "N/A";
+    }
+    const date = new Date(timestamp * 1000); // Convert seconds to milliseconds
+    if (isNaN(date.getTime())) {
+      return "N/A"; // Handle invalid date
+    }
+    const options: Intl.DateTimeFormatOptions = {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      hour: "numeric",
+      minute: "numeric",
+    };
+
+    const formattedDate = new Intl.DateTimeFormat("en-US", options).format(
+      date
+    );
+
+    return formattedDate;
+  }
+
+  function getUserName(
+    created_by: string | undefined,
+    houseUsers: User[]
+  ): string {
+    if (created_by === "" || created_by === undefined) {
+      return "N/A";
+    }
+    if (!houseUsers) {
+      return "N/A";
+    }
+    const user = houseUsers.find((user) => user.id === created_by);
+    if (user === undefined) {
+      return "N/A";
+    }
+    return user.display_name;
+  }
+
+  useEffect(() => {
+    console.log("selectedChore:", selectedChore);
+  }, [selectedChore]);
+
+  return (
+    <View style={{ flex: 1, padding: 20, backgroundColor: theme.colors.bgPrimary, alignItems: "center" }}>
+      <Text style={{ color: theme.colors.onBgPrimary, fontWeight: "bold", fontSize: 20 }}>
+        {selectedChore?.name}
+      </Text>
+      <Text style={{ color: theme.colors.onBgSecondary }}>
+        {selectedChore?.desc}
+      </Text>
+      <View style={{ marginTop: 10 }} />
+      <Text style={{ color: theme.colors.onBgSecondary }}>
+        created at {formatTimestamp(selectedChore?.created_at)} by{" "}
+        {getUserName(selectedChore?.created_by, houseUsers)}
+      </Text>
+    </View>
+  );
 };
 
 export default Faccende;

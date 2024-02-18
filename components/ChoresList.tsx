@@ -12,7 +12,6 @@ import SwipeableFlatList from "rn-gesture-swipeable-flatlist";
 import { RefreshControl, ScrollView, TouchableOpacity } from "react-native-gesture-handler";
 import { Avatar, Badge, Icon, Skeleton, useTheme } from "@rneui/themed";
 import { Chore, User } from "../types/types";
-import ChoreDetails from "./ChoreDetails";
 import { Session } from "@supabase/supabase-js";
 import { AppContext } from "../hooks/AppCasaProvider";
 
@@ -21,6 +20,7 @@ I18nManager.allowRTL(false);
 
 interface ListProps {
   filterType: string;
+  navigation: any;
 }
 
 function formatTimestamp(timestampInSeconds: number, isDone: boolean, doneAt: number | undefined | null): string {
@@ -60,7 +60,7 @@ function formatTimestamp(timestampInSeconds: number, isDone: boolean, doneAt: nu
   return `${sign} ${differenceInDays} day${differenceInDays === 1 ? "" : "s"} ${isDone ? "ago" : ""}`;
 }
 
-export default function List({ filterType }: ListProps) {
+export default function List({ filterType, navigation }: ListProps) {
   const [chores, setChores] = useState<Chore[]>([]);
   const [visibleChores, setVisibleChores] = useState<Chore[]>([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -178,8 +178,8 @@ export default function List({ filterType }: ListProps) {
   }, []);
 
   const handleItemPress = (item: Chore) => {
-    //console.log("Item pressed:", item);
-    setOpenChoreDialog(item);
+    dispatch({ type: "setSelectedChore", payload: item });
+    navigation.navigate("Chore Details");
   };
 
   const renderLeftAction = useCallback(
@@ -416,11 +416,6 @@ export default function List({ filterType }: ListProps) {
           noItemsLeft()
         )}
       </View>
-      <ChoreDetails
-        houseUsers={houseUsers}
-        item={openChoreDialog}
-        onClose={() => setOpenChoreDialog(null)}
-      />
     </>
   );
 }

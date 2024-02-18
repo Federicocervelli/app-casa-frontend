@@ -9,6 +9,7 @@ type State = {
   houseUsers: User[];
   chores: Chore[];
   houseLoaded: boolean;
+  selectedChore: Chore | null;
 };
 
 type Action = 
@@ -16,7 +17,9 @@ type Action =
   | { type: 'setHouseUsers'; payload: User[] }
   | { type: 'setChores'; payload: Chore[] }
   | { type: 'setSession'; payload: Session | null }
-  | { type: 'setHouseLoaded'; payload: boolean };
+  | { type: 'setHouseLoaded'; payload: boolean }
+  | { type: 'setSelectedChore'; payload: Chore | null }
+
 
 // Initial state
 const initialState: State = {
@@ -24,7 +27,8 @@ const initialState: State = {
   house: null,
   houseUsers: [],
   chores: [],
-  houseLoaded: false
+  houseLoaded: false,
+  selectedChore: null
 };
 
 // Reducer function
@@ -40,6 +44,8 @@ function reducer(state: State, action: Action): State {
       return { ...state, houseUsers: action.payload };
     case 'setHouseLoaded':
       return { ...state, houseLoaded: action.payload };
+    case 'setSelectedChore':
+      return { ...state, selectedChore: action.payload };
     default:
       return state;
   }

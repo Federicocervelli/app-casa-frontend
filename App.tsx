@@ -4,6 +4,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import { AppProvider } from "./hooks/AppCasaProvider";
 import Authentication from "./components/Authentication";
+import { useFonts } from 'expo-font';
 import 'react-native-gesture-handler';
 
 GoogleSignin.configure({
@@ -42,6 +43,9 @@ const theme = createTheme({
 });
 
 export default function App() {
+  const [fontsLoaded] = useFonts({
+    'Inter-Black': require('./assets/fonts/Inter-Black.ttf'),
+  });
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ThemeProvider theme={theme}>

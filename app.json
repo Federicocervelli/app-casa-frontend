@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "appcasa",
-    
+
     "slug": "appcasa",
     "scheme": "com.appcasa",
     "version": "1.0.0",
@@ -13,9 +13,7 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true
     },
@@ -32,7 +30,13 @@
     },
     "plugins": [
       "@react-native-google-signin/google-signin",
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-font",
+        {
+          "fonts": ["./assets/fonts/Inter-Black.ttf"]
+        }
+      ]
     ]
   }
 }

@@ -4,7 +4,6 @@
 - add icon parser (with ai?) to describe the chore on the list
 ^ maybe on add chore add select type dropdown
 - align chore description vertically relative to icon as a guideline
-- change font
 - add chronic chores
 - add a separate view for all chores
 - change token refresh to 5 mins and log it to see changes

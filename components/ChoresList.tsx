@@ -268,7 +268,7 @@ export default function List({ filterType, navigation }: ListProps) {
             }}
           >
             <Text
-              style={{ color: theme.colors.onBgPrimary, fontWeight: "bold" }}
+              style={{ color: theme.colors.onBgPrimary, fontWeight: "bold", fontFamily: "Inter-Black" }}
               ellipsizeMode="tail"
               numberOfLines={1}
             >
@@ -277,7 +277,7 @@ export default function List({ filterType, navigation }: ListProps) {
             <Text
               style={{
                 color: theme.colors.onBgSecondary,
-
+                
               }}
               ellipsizeMode="tail"
               numberOfLines={1}

@@ -44,16 +44,14 @@ function formatTimestamp(timestampInSeconds: number, isDone: boolean, doneAt: nu
 
   const differenceInMinutes = Math.floor(absDifference / 60);
   if (differenceInMinutes < 60) {
-    return `${sign} ${differenceInMinutes} minute${
-      differenceInMinutes === 1 ? "" : "s"
-    } ${isDone ? "ago" : ""}`;
+    return `${sign} ${differenceInMinutes} minute${differenceInMinutes === 1 ? "" : "s"
+      } ${isDone ? "ago" : ""}`;
   }
 
   const differenceInHours = Math.floor(differenceInMinutes / 60);
   if (differenceInHours < 24) {
-    return `${sign} ${differenceInHours} hour${
-      differenceInHours === 1 ? "" : "s"
-    } ${isDone ? "ago" : ""}`;
+    return `${sign} ${differenceInHours} hour${differenceInHours === 1 ? "" : "s"
+      } ${isDone ? "ago" : ""}`;
   }
 
   const differenceInDays = Math.floor(differenceInHours / 24);
@@ -240,12 +238,17 @@ export default function List({ filterType, navigation }: ListProps) {
               marginRight: 20, // Set a fixed margin to create space between icon and text
             }}
           >
-            <Icon
-              name="trash-can-outline"
-              type="material-community"
+            {item.is_done ? (<Icon
+              name="checkmark-done-outline"
+              type="ionicon"
+              size={30}
+              color={theme.colors.success}
+            />) : (<Icon
+              name="help-circle-outline"
+              type="ionicon"
               size={30}
               color={theme.colors.onBgPrimary}
-            />
+            />)}
           </View>
 
           {/* Middle content */}
@@ -304,8 +307,8 @@ export default function List({ filterType, navigation }: ListProps) {
 
   const noItemsLeft = () => (
     <ScrollView
-    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
-      
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
+
       <View
         style={{
           flex: 1,
@@ -314,7 +317,7 @@ export default function List({ filterType, navigation }: ListProps) {
           backgroundColor: theme.colors.bgPrimary,
           padding: 20,
         }}
-        
+
       >
         <View
           style={{
@@ -368,7 +371,7 @@ export default function List({ filterType, navigation }: ListProps) {
             >
               Prova a scorrere verso il basso per aggiornare la lista.
             </Text>
-            
+
           </View>
         </View>
       </View>
@@ -390,29 +393,29 @@ export default function List({ filterType, navigation }: ListProps) {
       >
         {visibleChores.length > 0 ? (
           <SwipeableFlatList
-          swipeableProps={{
-            friction: 3,
-            leftThreshold: 100,
-            overshootLeft: false,
-            overshootRight: false,
-          }}
-          data={visibleChores}
-          keyExtractor={(item) => item.id}
-          enableOpenMultipleRows={false}
-          renderItem={renderItem}
-          renderLeftActions={
-            visibleChores.length > 0 ? renderLeftAction : undefined
-          }
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-          ItemSeparatorComponent={() => (
-            <View
-              style={{ height: 1, backgroundColor: theme.colors.bgSecondary }}
-            />
-          )}
-        />
-        ):(
+            swipeableProps={{
+              friction: 3,
+              leftThreshold: 100,
+              overshootLeft: false,
+              overshootRight: false,
+            }}
+            data={visibleChores}
+            keyExtractor={(item) => item.id}
+            enableOpenMultipleRows={false}
+            renderItem={renderItem}
+            renderLeftActions={
+              visibleChores.length > 0 ? renderLeftAction : undefined
+            }
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
+            ItemSeparatorComponent={() => (
+              <View
+                style={{ height: 1, backgroundColor: theme.colors.bgSecondary }}
+              />
+            )}
+          />
+        ) : (
           noItemsLeft()
         )}
       </View>

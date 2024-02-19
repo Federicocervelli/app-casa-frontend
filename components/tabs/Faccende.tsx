@@ -8,6 +8,7 @@ import {
   Icon,
   SpeedDial,
   Text,
+  Avatar,
 } from "@rneui/themed";
 import { View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -21,11 +22,14 @@ import { Session } from "@supabase/supabase-js";
 import { IconNode } from "@rneui/base";
 import { AppContext } from "../../hooks/AppCasaProvider";
 import { createStackNavigator } from "@react-navigation/stack";
+import EditForm from "../EditForm";
 
 const Stack = createStackNavigator();
 
 const Faccende = () => {
   const { theme } = useTheme();
+  const { state, dispatch } = useContext(AppContext);
+  const { selectedChore, session } = state;
   return (
     <Stack.Navigator
       initialRouteName="List"
@@ -44,22 +48,29 @@ const Faccende = () => {
         options={{ headerShown: true }}
       />
       <Stack.Screen
+        name="Edit Chore"
+        component={EditChoreScreen}
+        options={{ headerShown: true }}
+      />
+      <Stack.Screen
         name="Chore Details"
         component={ChoreDetailsScreen}
         options={({ navigation }) => ({
           headerShown: true,
           headerRight: () => (
-            <TouchableOpacity
-              
-              
-              onPress={() => {
-                navigation.navigate("Edit Chore");
-              }}
-              style={{ marginRight: 15 }}
-            >
-              <Icon name="hammer" type="ionicon" color={theme.colors.accent} />
-              
-            </TouchableOpacity>
+            selectedChore?.created_by === session?.user.id && (
+              <TouchableOpacity
+
+
+                onPress={() => {
+                  navigation.navigate("Edit Chore");
+                }}
+                style={{ marginRight: 20 }}
+              >
+                <Icon name="pencil-outline" type="material-community" color={theme.colors.onBgPrimary} />
+
+              </TouchableOpacity>
+            )
           ),
         })}
       />
@@ -167,7 +178,7 @@ const AddChoreScreen = ({ navigation }: any) => {
 const ChoreDetailsScreen = ({ navigation }: any) => {
   const { theme } = useTheme();
   const { state, dispatch } = useContext(AppContext);
-  const { houseUsers, selectedChore } = state;
+  const { houseUsers, selectedChore, session } = state;
 
   function formatTimestamp(timestamp: number | undefined | null): string {
     if (timestamp === 0 || timestamp === null || timestamp === undefined) {
@@ -209,25 +220,101 @@ const ChoreDetailsScreen = ({ navigation }: any) => {
     return user.display_name;
   }
 
+  function getUserImage(item: string, houseUsers: User[]): string | undefined {
+    const user = houseUsers?.find((user) => user.id === item);
+    if (user) {
+      return user.avatar_url;
+    }
+    return undefined;
+  }
+
   useEffect(() => {
     console.log("selectedChore:", selectedChore);
   }, [selectedChore]);
 
   return (
-    <View style={{ flex: 1, padding: 20, backgroundColor: theme.colors.bgPrimary, alignItems: "center" }}>
-      <Text style={{ color: theme.colors.onBgPrimary, fontWeight: "bold", fontSize: 20 }}>
-        {selectedChore?.name}
-      </Text>
-      <Text style={{ color: theme.colors.onBgSecondary }}>
-        {selectedChore?.desc}
-      </Text>
-      <View style={{ marginTop: 10 }} />
-      <Text style={{ color: theme.colors.onBgSecondary }}>
-        created at {formatTimestamp(selectedChore?.created_at)} by{" "}
-        {getUserName(selectedChore?.created_by, houseUsers)}
-      </Text>
-    </View>
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={{  flexGrow: 1 }}>
+      <View style={{ flex: 1, justifyContent: "space-between", padding: 20 }}>
+        <View>
+          <Text style={{ color: theme.colors.onBgPrimary, fontWeight: "bold", fontSize: 30 }}>
+            {selectedChore?.name}
+          </Text>
+          <Text style={{ color: theme.colors.onBgSecondary, marginTop: 20, fontSize: 18 }}>
+            {selectedChore?.desc}
+          </Text>
+          {/** Assigned To */}
+          <View style={{ marginTop: 20, flexDirection: "column", gap: 10 }}>
+            {selectedChore?.users.map((user, index) => (
+              <View key={index} style={{ flexDirection: "row", alignItems: "center" }}>
+                <Avatar
+                  rounded={true}
+                  key={index}
+                  size={50}
+                  source={{ uri: getUserImage(user, houseUsers) }}
+                />
+                <View style={{ flexDirection: "column", marginLeft: 10 }}>
+                  <Text style={{ color: theme.colors.onBgPrimary, fontWeight: "bold" }}>Assigned to</Text>
+                  <Text style={{ color: theme.colors.onBgSecondary, fontSize: 16 }}>{getUserName(user, houseUsers)}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        </View>
+
+        <View style={{ marginTop: 20, flexDirection: "column", gap: 10 }}>
+          {/** Due Date */}
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            <View style={{ flexDirection: "row", alignItems: "center", padding: 10, backgroundColor: theme.colors.bgSecondary, borderRadius: 5 }}>
+              <Icon name="calendar-clear-outline" type="ionicon" size={30} color={theme.colors.onBgSecondary} />
+            </View>
+            <View style={{ flexDirection: "column", marginLeft: 10 }}>
+              <Text style={{ color: theme.colors.onBgPrimary, fontWeight: "bold" }}>Due date</Text>
+              <Text style={{ color: theme.colors.onBgSecondary }}>{formatTimestamp(selectedChore?.end)}</Text>
+            </View>
+          </View>
+          {/**Status */}
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            <View style={{ flexDirection: "row", alignItems: "center", padding: 10, backgroundColor: theme.colors.bgSecondary, borderRadius: 5 }}>
+              <Icon name={selectedChore?.is_done === true ? "checkmark-circle-outline" : "close-circle-outline"} type="ionicon" size={30} color={theme.colors.onBgSecondary} />
+            </View>
+            <View style={{ flexDirection: "column", marginLeft: 10 }}>
+              <Text style={{ color: theme.colors.onBgPrimary, fontWeight: "bold" }}>Status</Text>
+              <Text style={{ color: theme.colors.onBgSecondary }}>{selectedChore?.is_done === true ? "Done" : "Not done"}</Text>
+            </View>
+          </View>
+          {/** Created By */}
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <Avatar
+                rounded={true}
+                size={50}
+                source={{ uri: getUserImage(selectedChore?.created_by || "", houseUsers) }}
+              />
+            </View>
+            <View style={{ flexDirection: "column", marginLeft: 10 }}>
+              <Text style={{ color: theme.colors.onBgPrimary, fontWeight: "bold" }}>Created by</Text>
+              <Text style={{ color: theme.colors.onBgSecondary }}>{getUserName(selectedChore?.created_by, houseUsers)}</Text>
+            </View>
+          </View>
+          {/** Created At */}
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            <View style={{ flexDirection: "row", alignItems: "center", padding: 10, backgroundColor: theme.colors.bgSecondary, borderRadius: 5 }}>
+              <Icon name="calendar-clear-outline" type="ionicon" size={30} color={theme.colors.onBgSecondary} />
+            </View>
+            <View style={{ flexDirection: "column", marginLeft: 10 }}>
+              <Text style={{ color: theme.colors.onBgPrimary, fontWeight: "bold" }}>Created at</Text>
+              <Text style={{ color: theme.colors.onBgSecondary }}>{formatTimestamp(selectedChore?.created_at)}</Text>
+            </View>
+          </View>
+        </View>
+      </View>
+    </ScrollView>
   );
 };
+
+const EditChoreScreen = ({ navigation }: { navigation: any; }) => {
+  const { state, dispatch } = useContext(AppContext);
+  return <EditForm navigation={navigation} />;
+}
 
 export default Faccende;

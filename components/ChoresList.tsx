@@ -181,26 +181,33 @@ export default function List({ filterType, navigation }: ListProps) {
   };
 
   const renderLeftAction = useCallback(
-    (item: Chore) => (
-      <TouchableOpacity
-        onPress={() => deleteItem(item.id)}
-        style={styles.leftAction}
-      >
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            paddingHorizontal: "auto",
-          }}
+    (item: Chore) => {
+      // Check if item is already done, if yes, return null
+      if (item.is_done) {
+        return null;
+      }
+
+      return (
+        <TouchableOpacity
+          onPress={() => deleteItem(item.id)}
+          style={styles.leftAction}
         >
-          {loadingChoreDone ? (
-            <ActivityIndicator size={40} color="white" />
-          ) : (
-            <Icon name="check" size={40} color="white" />
-          )}
-        </View>
-      </TouchableOpacity>
-    ),
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              paddingHorizontal: "auto",
+            }}
+          >
+            {loadingChoreDone ? (
+              <ActivityIndicator size={40} color="white" />
+            ) : (
+              <Icon name="check" size={40} color="white" />
+            )}
+          </View>
+        </TouchableOpacity>
+      );
+    },
     [loadingChoreDone]
   );
 
@@ -267,18 +274,17 @@ export default function List({ filterType, navigation }: ListProps) {
             >
               {item.name}
             </Text>
-            <View
-              style={{ flexDirection: "row", alignItems: "center", gap: -10 }}
-            >
-              {item.users.map((user, index) => (
-                <Avatar
-                  rounded={true}
-                  key={index}
-                  size={25}
-                  source={{ uri: getUserImage(user, houseUsers) }}
-                />
-              ))}
-            </View>
+            <Text
+              style={{
+                color: theme.colors.onBgSecondary,
+
+              }}
+              ellipsizeMode="tail"
+              numberOfLines={1}
+              >
+                {item.desc}
+              </Text>
+              
           </View>
 
           {/* Date */}

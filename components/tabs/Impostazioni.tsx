@@ -23,13 +23,13 @@ const Impostazioni: React.FC<ImpostazioniProps> = ({
   const [inputFieldEmailValue, setInputFieldEmailValue] = useState("");
   const [warningDialogVisible, setWarningDialogVisible] = useState(false);
   const [isLeavingHouse, setIsLeavingHouse] = useState(false);
-  const {theme} = useTheme();
+  const { theme } = useTheme();
   const { state, dispatch } = useContext(AppContext);
-  const { session,house, houseUsers } = state;
-  
+  const { session, house, houseUsers } = state;
+
 
   async function createHouse() {
-    if(!session) return console.error("You need to be logged in to create a house!");
+    if (!session) return console.error("You need to be logged in to create a house!");
     console.log("Creating", inputFieldHouseValue, inputFieldSlugValue);
     if (!inputFieldHouseValue || inputFieldHouseValue === "") {
       console.error("You need to specify a house name!");
@@ -72,19 +72,17 @@ const Impostazioni: React.FC<ImpostazioniProps> = ({
   }
 
   async function leaveHouse() {
-    if(!session) return console.error("You need to be logged in to create a house!");
+    if (!session) return console.error("You need to be logged in to create a house!");
     if (!house) {
       return;
     }
     console.log("Leaving " + house?.slug);
-    if (session.user.id === house.created_by) {
-      setWarningDialogVisible(true);
-    }
+    setWarningDialogVisible(true);
   }
 
 
-  async function confirmLeaveHouse(){
-    if(!session) return console.error("You need to be logged in to create a house!");
+  async function confirmLeaveHouse() {
+    if (!session) return console.error("You need to be logged in to create a house!");
     setIsLeavingHouse(true);
     const result = await fetch(
       `${process.env.EXPO_PUBLIC_API_ENDPOINT}/api/v2/house`,
@@ -111,7 +109,7 @@ const Impostazioni: React.FC<ImpostazioniProps> = ({
   }
 
   async function joinHouse() {
-    if(!session) return console.error("You need to be logged in to create a house!");
+    if (!session) return console.error("You need to be logged in to create a house!");
     console.log("Joining " + inputFieldJoinSlugValue);
 
     const result = await fetch(
@@ -158,95 +156,101 @@ const Impostazioni: React.FC<ImpostazioniProps> = ({
       }}
     >
       <ScrollView style={{ width: "100%", flex: 1 }} contentContainerStyle={{ alignItems: "center" }}>
-      {session && (
-        <>
-          <Avatar
-            size={"large"}
-            rounded
-            source={{ uri: session.user.user_metadata.avatar_url }}
-            containerStyle={{ borderColor: theme.colors.accent, borderWidth: 2 }}
-          />
-          <View style={{ marginTop: 10 }} />
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-            <Text h4 style={{ color: theme.colors.onBgPrimary }}>
-              {session.user.user_metadata.full_name}
-            </Text>
-            <Icon
-              name="log-out"
-              type="entypo"
-              color={theme.colors.onBgPrimary}
-              onPress={() => logOut()}
+        {session && (
+          <>
+            <Avatar
+              size={"large"}
+              rounded
+              source={{ uri: session.user.user_metadata.avatar_url }}
+              containerStyle={{ borderColor: theme.colors.accent, borderWidth: 2 }}
             />
-          </View>
-          {/* <Button onPress={() => getToken()}>Get Token</Button> */}
-          <Text style={{ color: theme.colors.onBgSecondary }}>
-            Current House: {house?.name || "None"}
-          </Text>
-          <View style={{ marginTop: 20 }} />
-          <View style={{ width: "90%", height: "100%" }}>
-            {!house && (
-              <>
-                <InputField
-                  label="House Name"
-                  onInputChange={setInputFieldHouseValue}
-                />
-                <InputField
-                  label="House Slug - a unique identifier"
-                  
-                  onInputChange={setInputFieldSlugValue}
-                />
-                <Button containerStyle={{borderRadius: 20}} buttonStyle={{ padding: 15 }} color={theme.colors.accent} titleStyle={{ color: theme.colors.onBgPrimary }} onPress={createHouse}>Create House</Button>
-                <View style={{ marginTop: 10 }} />
-                <InputField
-                  label="slug"
-                  onInputChange={setInputFieldJoinSlugValue}
-                />
-                <Button containerStyle={{borderRadius: 20}} buttonStyle={{ padding: 15 }} color={theme.colors.accent} titleStyle={{ color: theme.colors.onBgPrimary }} onPress={joinHouse}>Join House</Button>
-                <View style={{ marginTop: 10 }} />
-              </>
-            )}
-            {house && (
-              <>
-                <Button containerStyle={{borderRadius: 20}} buttonStyle={{ padding: 15 }} color={theme.colors.accent} titleStyle={{ color: theme.colors.onBgPrimary }} onPress={() => leaveHouse()}>Leave House</Button>
-                <View style={{ marginTop: 10 }} />
-              </>
-            )}
-            <Dialog
-              isVisible={warningDialogVisible}
-              onBackdropPress={() => setWarningDialogVisible(false)}
-            >
-              <Dialog.Title title="Are you sure?" />
-              <Text>
-                If you leave the house, it will be{" "}
-                <Text style={{ fontWeight: "bold", color: "red" }}>
-                  deleted
-                </Text>{" "}
-                because you are the owner.
+            <View style={{ marginTop: 10 }} />
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+              <Text h4 style={{ color: theme.colors.onBgPrimary }}>
+                {session.user.user_metadata.full_name}
               </Text>
-              <Dialog.Actions>
-                <View style={{ flexDirection: "row", justifyContent: "flex-end", width: "100%" }}>
-                  <Dialog.Button
-                    loading={isLeavingHouse}
-                    loadingProps={{ color: "red" }}
-                    titleStyle={{ color: "red" }}
-                    title="Delete anyways"
-                    onPress={() => confirmLeaveHouse().then(() => setWarningDialogVisible(false))}
+              <Icon
+                name="log-out"
+                type="entypo"
+                color={theme.colors.onBgPrimary}
+                onPress={() => logOut()}
+              />
+            </View>
+            {/* <Button onPress={() => getToken()}>Get Token</Button> */}
+            <Text style={{ color: theme.colors.onBgSecondary }}>
+              Current House: {house?.name || "None"}
+            </Text>
+            <View style={{ marginTop: 20 }} />
+            <View style={{ width: "90%", height: "100%" }}>
+              {!house && (
+                <>
+                  <InputField
+                    label="House Name"
+                    onInputChange={setInputFieldHouseValue}
                   />
-                  <Dialog.Button
-                    disabled={isLeavingHouse}
-                    title="Never mind"
-                    onPress={() => setWarningDialogVisible(false)}
+                  <InputField
+                    label="House Slug - a unique identifier"
+
+                    onInputChange={setInputFieldSlugValue}
                   />
-                </View>
-              </Dialog.Actions>
-            </Dialog>
-            
-            <Button containerStyle={{borderRadius: 20}} buttonStyle={{ padding: 15 }} color={theme.colors.accent} titleStyle={{ color: theme.colors.onBgPrimary }} onPress={async () => console.log(session.access_token)}>
-              Get Token
-            </Button>
-          </View>
-        </>
-      )}
+                  <Button containerStyle={{ borderRadius: 20 }} buttonStyle={{ padding: 15 }} color={theme.colors.accent} titleStyle={{ color: theme.colors.onBgPrimary }} onPress={createHouse}>Create House</Button>
+                  <View style={{ marginTop: 10 }} />
+                  <InputField
+                    label="slug"
+                    onInputChange={setInputFieldJoinSlugValue}
+                  />
+                  <Button containerStyle={{ borderRadius: 20 }} buttonStyle={{ padding: 15 }} color={theme.colors.accent} titleStyle={{ color: theme.colors.onBgPrimary }} onPress={joinHouse}>Join House</Button>
+                  <View style={{ marginTop: 10 }} />
+                </>
+              )}
+              {house && (
+                <>
+                  <Button containerStyle={{ borderRadius: 20 }} buttonStyle={{ padding: 15 }} color={theme.colors.accent} titleStyle={{ color: theme.colors.onBgPrimary }} onPress={() => leaveHouse()}>Leave House</Button>
+                  <View style={{ marginTop: 10 }} />
+                </>
+              )}
+              <Dialog
+                isVisible={warningDialogVisible}
+                onBackdropPress={() => setWarningDialogVisible(false)}
+              >
+                <Dialog.Title title="Are you sure?" />
+                {house?.created_by === session.user.id ? (
+                  <Text>
+                    If you leave the house, it will be{" "}
+                    <Text style={{ fontWeight: "bold", color: "red" }}>
+                      deleted
+                    </Text>{" "}
+                    because you are the owner.
+                  </Text>
+                ) : (
+                  <Text>
+                    Are you sure you want to leave?
+                  </Text>
+                )}
+                <Dialog.Actions>
+                  <View style={{ flexDirection: "row", justifyContent: "flex-end", width: "100%" }}>
+                    <Dialog.Button
+                      loading={isLeavingHouse}
+                      loadingProps={{ color: "red" }}
+                      titleStyle={{ color: "red" }}
+                      title={house?.created_by === session.user.id ? "Delete" : "Leave"}
+                      onPress={() => confirmLeaveHouse().then(() => setWarningDialogVisible(false))}
+                    />
+                    <Dialog.Button
+                      disabled={isLeavingHouse}
+                      title="Never mind"
+                      onPress={() => setWarningDialogVisible(false)}
+                    />
+                  </View>
+                </Dialog.Actions>
+              </Dialog>
+
+              <Button containerStyle={{ borderRadius: 20 }} buttonStyle={{ padding: 15 }} color={theme.colors.accent} titleStyle={{ color: theme.colors.onBgPrimary }} onPress={async () => console.log(session.access_token)}>
+                Get Token
+              </Button>
+            </View>
+          </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );

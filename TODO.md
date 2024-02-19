@@ -1,4 +1,3 @@
-- add "edit chore" (also on backend) (high prio)
 - fix chore done bug
 - implement live changing time
 - manage connection errors / request errors with toasts
